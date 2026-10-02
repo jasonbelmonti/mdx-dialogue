@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.data/
+.worktrees/
+.context/
+.context-capsule/
+.codefactory/
+.DS_Store
+.env
