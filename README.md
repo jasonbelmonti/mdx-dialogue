@@ -1,8 +1,8 @@
 # MDX Dialogue
 
-A working proof of a visual conversation: choose a document layout, add a note, and receive a real model-authored MDX reply with a revised visual preview in the same panel.
+A local proof of a model composing an interactive explanation, receiving an annotation about a selected graph node, and revising the same document. React Flow draws the graph; Docusaurus displays the same accepted MDX and graph data through the shared renderer.
 
-The local harness uses the official MCP Apps `App` and `AppBridge` SDKs. The embedded panel sends `tools/call`, `ui/update-model-context`, and `ui/message`. The host runs the authenticated Codex CLI, validates its response, and exposes the updated document through MCP. No model response is hardcoded.
+The MCP Apps `App` and `AppBridge` SDKs carry tool calls, structured model context and follow-up messages. The local host invokes the authenticated Codex CLI. Graph content and replies come from actual model calls.
 
 ## Run
 
@@ -11,72 +11,83 @@ Requires Node 22.20+ and an authenticated `codex` executable on PATH.
 ```sh
 npm ci
 npm run build
+npm run docs:build
 npm start
 ```
 
-Open **http://127.0.0.1:4317**. Select a layout, enter a note such as “use a green accent and compact controls,” and click **Discuss & revise**. The response includes a new preview and a **View the round trip** disclosure with the exact input, submission ID, and generated MDX. Each opened page has its own document ID in the URL; bookmark that URL to reopen it.
+Open **http://127.0.0.1:4317/graphs**. Describe a system, process, learning map or concept, then choose **Create document**. Select a graph node (or use the **Discuss a node** menu), enter a question or change, and choose **Discuss & revise**. The accepted revision replaces the document in place. Dragging nodes and zooming remain local presentation state.
 
-`CODEX_BIN` can select an installed Codex executable. `PORT` changes the loopback port. The local runner uses the CLI's default model with user configuration omitted for an isolated invocation; it keeps the existing account authentication. It uses read-only sandboxing, disables shell/apps/multi-agent/web-search features, and requests schema-constrained output. This is an actual model call using the signed-in account.
+The host's **Read in Docusaurus** link opens the same document at `/docs/graph?document=…`, with its ID and revision. The Docusaurus page reads the accepted document from the local API when opened; reload it after a later revision. Its **Discuss or revise in Graph Studio** link returns to the same conversation.
 
-The server saves dialogue state in `.data/dialogues.json`. Each model attempt retains its request, events, stderr, and response receipt under `.data/runs/`. These files are ignored by Git. Interrupted runs become retryable when the server restarts. A failing response leaves the selection and annotation available.
+The original layout proof remains at **http://127.0.0.1:4317/**. Bookmark a document's full URL to reopen it. **View the round trip** exposes the saved request and accepted response.
 
-## What is proven
+`CODEX_BIN` selects the CLI executable. `PORT` changes the loopback port. The CLI uses the account's authentication with user configuration omitted, read-only sandboxing, shell/apps/multi-agent/web search disabled, and schema-constrained output. Each submission uses the signed-in account's model allowance.
 
-- The initial document in `content/comparison.mdx` is compiled as MDX with React components.
-- The embedded panel uses the actual MCP Apps bridge, including structured context and a follow-up message.
-- A real Codex CLI response returns restricted MDX and changes the layout, accent, and spacing rendered by `LayoutPreview`.
-- MCP protocol tests exercise real tool discovery, resource retrieval, submission and response calls.
+State is saved in `.data/graphs.json` and `.data/dialogues.json`. Each attempt retains request, events, stderr and response receipt under `.data/runs/`. These are ignored by Git. Failures retain the exact annotation, target and submission ID; **Retry saved request** retries that request. Interrupted runs become retryable on server restart.
 
-The local host is a small custom harness. Native ChatGPT/Codex conversation-panel installation has not been verified. A successful local bridge test does not establish native host feature availability.
+## A reusable graph vocabulary
 
-## Native MCP integration
+The model tool `open_graph_dialogue` describes when a diagram helps: relationships, dependencies, processes and concepts. It accepts an optional `document` so a model can compose an interactive explanation directly, or can open a blank prompt surface. Subsequent node annotations use `respond_to_graph` to update the existing document.
 
-The server exposes `open_dialogue`, `get_dialogue`, `submit_selection` (app visibility), and `respond_to_selection` (model visibility), plus a self-contained MCP App HTML resource. Tool metadata declares a conversation-panel entrypoint. In a native host, the host's model calls `respond_to_selection` directly; the local Codex runner is not involved.
+A graph document contains `title`, `summary`, `mdx` and a `graphs` array. MDX combines prose with literal component references:
 
-For a local stdio MCP client:
+```mdx
+## How the pieces connect
+
+A short explanation can introduce the important relationship.
+
+<FlowGraph id="overview" data="request-path" interaction="discuss" />
+```
+
+`data` refers to a graph ID. Each graph contains semantic nodes (`id`, `label`, `description`, `kind`) and edges (`id`, `source`, `target`, `label`). Node kinds are `concept`, `process`, `decision` and `store`. Dagre supplies initial positions. Stable graph/node IDs let an annotation refer to meaning rather than screen coordinates.
+
+The interaction carries `documentId`, `revision`, `submissionId`, `annotation`, and either a `{graphId, nodeId}` target or `null` for the whole document. Duplicate saves are idempotent. Stale responses, missing targets and invalid replies cannot advance the accepted revision.
+
+This is one reusable component family. It does not install a global model skill or automatically make every assistant conversation use visual tools.
+
+## MDX and Docusaurus boundary
+
+Model-authored MDX is parsed as a restricted syntax tree and rendered as React elements. It is never evaluated as JavaScript. Headings, paragraphs, emphasis, lists and inline code are supported. Imports, expressions, scripts, arbitrary HTML, unknown components and nonliteral attributes are rejected. Graph IDs and edge endpoints are validated before persistence. Each graph must appear once in its MDX.
+
+`site/src/pages/graph.mdx` is trusted project MDX. Its browser-only viewer uses the same `web/graph/GraphDocument.tsx` and `FlowGraph.tsx` as the MCP widget, plus the accepted document loaded by ID. The browser boundary avoids executing React Flow during Docusaurus server rendering. Generated responses never enter the Docusaurus compiler.
+
+The standalone `site/package.json` intentionally omits `type`: Docusaurus-generated modules mix ESM imports with webpack `require.resolveWeak`. The webpack extension alias resolves shared TypeScript imports written with `.js` specifiers.
+
+## MCP integration
+
+Graph tools: `open_graph_dialogue`, `get_graph_dialogue`, `submit_graph_annotation` (app visibility), and `respond_to_graph` (model visibility). The existing layout tools remain available. Each flow has a self-contained MCP App resource with conversation-panel metadata.
 
 ```sh
 npm run build
 npm run mcp:stdio
 ```
 
-`scripts/start-mcp.sh` runs this server from any working directory. For a Codex CLI tool-only check, register it using `codex mcp add mdx-dialogue -- /absolute/path/to/mdx-dialogue/scripts/start-mcp.sh`. Registration changes your Codex configuration; it is not performed by this project. CLI tool availability alone does not prove UI support.
+`scripts/start-mcp.sh` starts the stdio server from any working directory. A compatible native host can use the tools directly, with its model calling `respond_to_graph`; it does not use the local CLI runner. The stdio server keeps state for its process lifetime; HTTP mode persists local state.
 
-`plugin/` contains a portable plugin manifest and MCP configuration for a local host that can reach `http://127.0.0.1:4317/mcp`. Start the HTTP server first. The manifest is a development scaffold; it is not published or installed. A remote ChatGPT service cannot reach your loopback URL directly. Native testing needs a supported private MCP tunnel or a properly configured endpoint and host registration. The current server intentionally rejects foreign origins/hosts; do not expose it publicly without adding the appropriate transport/authentication configuration.
-
-Once connected in a compatible host, ask: “Open an MDX comparison.” Submit a choice in the panel. The host model should read the saved submission and call `respond_to_selection` with the documented component vocabulary. The panel polls `get_dialogue` while waiting and displays the accepted response.
-
-## MDX boundary
-
-The initial application MDX is trusted project source. Model-authored MDX is parsed with `remark-mdx` and rendered from a validated syntax tree; it is never evaluated as JavaScript. Supported reply content is headings, paragraphs, emphasis, lists, inline code, and exactly one component:
-
-```mdx
-<LayoutPreview layout="split" accent="green" density="compact" />
-```
-
-Supported values: `layout="split|stacked"`, `accent="violet|blue|green"`, `density="comfortable|compact"`. Attributes must be literal strings. Imports, expressions, scripts, arbitrary HTML, unknown components, and duplicate attributes are rejected before state mutation.
-
-This vocabulary can be registered through Docusaurus's MDX component mapping. A full Docusaurus site, navigation, publishing, and arbitrary MDX execution are outside this prototype.
+`plugin/` remains a development scaffold for a host that can reach `http://127.0.0.1:4317/mcp`. Native ChatGPT/Codex panel installation and same-thread model continuity remain unverified. The local host binds to loopback and rejects foreign hosts/origins. Public hosting, authentication and distribution are outside this prototype.
 
 ## Development
 
 ```sh
 npm run check
-npm test
 npm run build
+npm test
+npm run docs:build
 ```
 
-`npm run dev` builds the web bundles and watches server code. Run `npm run build` after frontend or MDX edits, then reload the page. Browser checks were performed with Playwright CLI because the Browser plugin was not available in the build session.
+Build before the MCP resource tests on a fresh checkout. `npm run dev` builds the web bundles and watches server changes. Rebuild and reload after frontend edits. Rebuild Docusaurus separately after site/shared-renderer edits. Use the production site through the local `/docs` route to exercise its API connection; `docs:dev` on port 4318 is for site development only.
 
-Code ownership:
+Ownership:
 
-- `shared/`: wire schemas and the restricted MDX language.
-- `server/dialogue-store.ts`: revision and submission state transitions.
-- `server/codex-runner.ts`: isolated model subprocess and attempt evidence.
-- `server/mcp.ts`: tools and UI resource.
-- `server/http.ts`: loopback HTTP host and model request dispatch.
-- `web/host.ts`: local MCP Apps host.
-- `web/bridge/`: embedded app bridge.
-- `web/components/`: comparison, form, preview, and model reply.
+- `shared/graph/`: semantic schemas, graph/MDX validation and model vocabulary.
+- `shared/mdx-syntax.ts`: shared restricted syntax parser.
+- `server/graph/`: graph state transitions, persistence, MCP tools and HTTP dispatch.
+- `server/codex-process.ts`: isolated model invocation and attempt receipts.
+- `web/host.ts`: local MCP Apps harness.
+- `web/graph/`: studio, interaction state, bridge and shared graph renderer.
+- `site/`: Docusaurus MDX pages and browser-only saved-document view.
+- Existing `web/components/`, `server/dialogue-store.ts` and layout tools retain the original proof.
 
-Local prototype limits: one active model run at a time, 100 saved documents, 20 submissions per document, a three-minute model timeout, and no multi-user authentication. The built UI bundles include SDKs and an MDX parser; bundle optimization is deferred.
+Limits: one active local model run per flow, 100 documents and 20 submissions per document, up to three graphs with 32 nodes each, a three-minute model timeout, and no multi-user authentication. Pan/zoom is needed for larger graphs. Editing edges, arbitrary component code, bundle optimization and additional vocabulary families are follow-up work.
+
+Docusaurus is a build dependency. Scoped dependency overrides update its worker pool and serialization package to patched releases; production builds verify compatibility. Other upstream build-tool audit findings are retained as a prototype limitation rather than applying incompatible forced downgrades.

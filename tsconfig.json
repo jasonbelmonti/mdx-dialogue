@@ -11,7 +11,7 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client", "@docusaurus/module-type-aliases"]
   },
-  "include": ["shared", "server", "web", "tests", "*.ts"]
+  "include": ["shared", "server", "web", "site/src", "site/docusaurus.config.ts", "tests", "*.ts"]
 }

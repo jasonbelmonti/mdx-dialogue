@@ -1,3 +1,5 @@
+import { GraphStore } from './graph/store.js';
+import { registerGraphTools } from './graph/mcp.js';
 import { readFile } from 'node:fs/promises';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
@@ -10,11 +12,12 @@ import {
 import { DialogueStore } from './dialogue-store.js';
 
 export const widgetUri = 'ui://mdx-dialogue/comparison.html';
-export function createMcpServer(store: DialogueStore) {
+export function createMcpServer(store: DialogueStore, graphs = new GraphStore()) {
   const server = new McpServer(
     { name: 'mdx-dialogue', version: '0.1.0' },
     {
-      instructions: `Open a comparison with open_dialogue. User interaction creates a submission. Read its exact input with get_dialogue, then use respond_to_selection to return model-authored MDX to the same panel. Never claim the loop is complete until that tool accepts the response. ${vocabulary}`,
+      instructions:
+        'Use prose when sufficient. When an interactive graph clarifies relationships, dependencies, processes or concepts, use open_graph_dialogue with a composed document. Read graph annotations with get_graph_dialogue and revise through respond_to_graph. Each tool documents its component vocabulary. The separate layout demonstration uses open_dialogue, get_dialogue and respond_to_selection. Read the exact saved submission before responding. Never claim a revision is accepted until its response tool succeeds.',
     },
   );
   const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
@@ -111,5 +114,6 @@ export function createMcpServer(store: DialogueStore) {
     async ({ documentId, submissionId, ...reply }) =>
       guarded(() => answer(store.complete(documentId, submissionId, reply, 'host-model'))),
   );
+  registerGraphTools(server, graphs);
   return server;
 }

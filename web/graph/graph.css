@@ -1,0 +1,118 @@
+.flow-figure {
+  margin: 28px 0;
+  border: 1px solid #dce3ee;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  color: #24334b;
+}
+.flow-figure figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e8edf4;
+  font: 14px system-ui;
+}
+.flow-figure figcaption span {
+  font-size: 12px;
+  color: #63738a;
+  white-space: nowrap;
+}
+.flow-canvas {
+  height: 510px;
+  width: 100%;
+  background: #f8fafc;
+}
+.flow-canvas .react-flow {
+  --xy-node-border-radius: 12px;
+  --xy-edge-label-background-color: #fff;
+}
+.idea-node {
+  box-sizing: border-box;
+  width: 238px;
+  min-height: 130px;
+  padding: 15px 17px;
+  border: 1px solid #cad4e3;
+  border-top: 3px solid #617bd3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 10px #172c4d08;
+}
+.idea-node.process {
+  border-top-color: #2d968d;
+}
+.idea-node.decision {
+  border-top-color: #c28a39;
+}
+.idea-node.store {
+  border-top-color: #9c70b3;
+}
+.idea-node.is-selected {
+  outline: 3px solid #6366db;
+  outline-offset: 3px;
+}
+.idea-node strong {
+  display: block;
+  font: 600 15px/1.35 system-ui;
+  margin: 5px 0 6px;
+  color: #25314a;
+}
+.idea-node p {
+  margin: 0;
+  font: 12px/1.4 system-ui;
+  color: #63718a;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.node-kind {
+  font: 10px/1 system-ui;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #76839b;
+}
+.graph-hint {
+  font: 12px/1.5 system-ui;
+  color: #748198;
+  margin: 0 !important;
+  padding: 10px 20px;
+  border-top: 1px solid #e8edf4;
+}
+.graph-prose {
+  color: #344258;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.graph-prose h2 {
+  font-size: 25px;
+  letter-spacing: -0.025em;
+  color: #26334a;
+  margin: 26px 0 12px;
+}
+.graph-prose h3 {
+  font-size: 19px;
+  color: #26334a;
+}
+.graph-prose code {
+  background: #edf0f6;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.88em;
+}
+@media (max-width: 600px) {
+  .flow-canvas {
+    height: 400px;
+  }
+  .flow-figure figcaption {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+  }
+  .graph-prose h2 {
+    font-size: 22px;
+  }
+}

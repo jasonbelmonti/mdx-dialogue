@@ -1,0 +1,239 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #f5f7fb;
+  color: #24334b;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+a {
+  color: #5059ba;
+}
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #7b82ed;
+  outline-offset: 3px;
+}
+.graph-studio {
+  max-width: 1480px;
+  padding: 40px 40px 28px;
+  margin: auto;
+}
+.studio-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  color: #6d77a7;
+}
+.studio-heading h1 {
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  margin: 12px 0;
+  color: #202f46;
+  max-width: 960px;
+}
+.studio-heading p {
+  color: #6a778c;
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0;
+}
+.revision {
+  font-size: 12px;
+  white-space: nowrap;
+  color: #6b7890;
+  padding-top: 7px;
+}
+.studio-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 305px;
+  gap: 34px;
+  align-items: start;
+}
+.document-area {
+  min-width: 0;
+}
+.conversation-card {
+  padding: 23px;
+  background: #fff;
+  border: 1px solid #e0e6ef;
+  border-radius: 17px;
+  position: sticky;
+  top: 20px;
+  margin-top: 24px;
+}
+.conversation-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 22px 0 9px;
+  line-height: 1.5;
+}
+.conversation-card select,
+.conversation-card textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d8dfeb;
+  border-radius: 9px;
+  padding: 12px;
+  background: #fbfcff;
+  color: #344258;
+  line-height: 1.55;
+  font-size: 13px;
+}
+.conversation-card textarea {
+  resize: vertical;
+}
+.selected-detail {
+  border-left: 3px solid #8b90d8;
+  margin-top: 16px;
+  padding-left: 12px;
+  font-size: 13px;
+}
+.selected-detail p {
+  color: #748198;
+  line-height: 1.6;
+  font-size: 12px;
+  margin-bottom: 0;
+}
+.graph-submit {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 13px 15px;
+  background: #5059ba;
+  color: white;
+  border: 0;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.graph-submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.privacy-note {
+  font-size: 11px;
+  line-height: 1.65;
+  color: #8a94a5;
+  margin: 13px 0 0;
+}
+.docs-link {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.7;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e9edf4;
+  text-decoration: none;
+}
+.graph-error {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #a44242;
+}
+.graph-status {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #626baa;
+}
+.empty-document {
+  margin-top: 24px;
+  min-height: 390px;
+  border: 1px dashed #cdd6e6;
+  border-radius: 18px;
+  padding: 50px;
+  background: linear-gradient(135deg, #fafbff, #edf1fa);
+}
+.empty-document h2 {
+  font-size: 28px;
+  letter-spacing: -0.035em;
+  max-width: 410px;
+}
+.empty-document p {
+  color: #78869b;
+  line-height: 1.8;
+  max-width: 450px;
+}
+.empty-symbol {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  background: #e0e5f7;
+  color: #6e79b6;
+  border-radius: 13px;
+  font-size: 28px;
+}
+.graph-receipt {
+  border-top: 1px solid #dce3ee;
+  margin-top: 30px;
+  padding-top: 20px;
+  font-size: 12px;
+  color: #73809a;
+}
+.graph-receipt pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 400px;
+  overflow: auto;
+}
+.graph-loading {
+  padding: 50px;
+  color: #6b7790;
+}
+@media (max-width: 950px) {
+  .graph-studio {
+    padding: 26px 20px;
+  }
+  .studio-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .conversation-card {
+    position: static;
+    margin-top: 0;
+  }
+  .empty-document {
+    min-height: 260px;
+    padding: 28px;
+  }
+  .studio-heading {
+    gap: 12px;
+  }
+  .studio-heading h1 {
+    font-size: 29px;
+  }
+  .graph-receipt pre {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}

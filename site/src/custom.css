@@ -1,0 +1,36 @@
+:root {
+  --ifm-color-primary: #5059ba;
+  --ifm-font-family-base: Inter, system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-weight: 650;
+  --ifm-container-width: 1240px;
+}
+.document-origin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f4f6fb;
+  border: 1px solid #dfe5ef;
+  border-radius: 12px;
+  padding: 22px;
+  margin: 28px 0;
+}
+.document-origin span {
+  font-size: 12px;
+  color: #6a7790;
+  overflow-wrap: anywhere;
+}
+.document-origin a {
+  font-size: 13px;
+}
+.node-detail {
+  border-left: 3px solid #7078c6;
+  background: #f7f8fc;
+  padding: 20px;
+  margin: 20px 0;
+}
+.node-detail p {
+  margin-bottom: 0;
+}
+.theme-doc-markdown .flow-figure {
+  margin: 26px 0;
+}

@@ -26,6 +26,9 @@ test('local API rejects foreign origins and preserves selection when the real ru
   });
   listener.on('request', app);
   try {
+    const studio = await fetch(`${origin}/graphs`);
+    assert.equal(studio.status, 200);
+    assert.match(await studio.text(), /MDX Dialogue/);
     const payload = {
       documentId: doc.id,
       submissionId: selection.submissionId,

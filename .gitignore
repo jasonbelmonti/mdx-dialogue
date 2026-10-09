@@ -7,3 +7,6 @@ dist/
 .codefactory/
 .DS_Store
 .env
+
+site/.docusaurus/
+site/build/

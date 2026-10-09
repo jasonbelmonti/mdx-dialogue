@@ -5,17 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build && tsx watch server/main.ts",
-    "build": "vite build && vite build --config vite.widget.config.ts",
+    "build": "vite build && vite build --config vite.widget.config.ts && vite build --config vite.graph.config.ts",
     "start": "tsx server/main.ts",
     "check": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "mcp:stdio": "tsx server/stdio.ts",
-    "format": "prettier --write shared server web content tests *.ts *.html *.json"
+    "format": "prettier --write shared server web content tests *.ts *.html *.json",
+    "docs:build": "docusaurus build site",
+    "docs:dev": "docusaurus start site --host 127.0.0.1 --port 4318"
   },
   "dependencies": {
+    "@dagrejs/dagre": "3.1.1",
     "@mdx-js/react": "3.1.1",
     "@modelcontextprotocol/ext-apps": "2.0.3",
     "@modelcontextprotocol/sdk": "1.32.0",
+    "@xyflow/react": "12.12.0",
     "express": "5.2.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -35,6 +39,14 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.2",
-    "vite-plugin-singlefile": "2.3.3"
+    "vite-plugin-singlefile": "2.3.3",
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2"
+  },
+  "overrides": {
+    "@docusaurus/core": {
+      "tinypool": "2.2.0"
+    },
+    "serialize-javascript": "7.1.2"
   }
 }

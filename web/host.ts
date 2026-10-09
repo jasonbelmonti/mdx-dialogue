@@ -4,6 +4,7 @@ import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { AppBridge, PostMessageTransport } from '@modelcontextprotocol/ext-apps/app-bridge';
 import './host.css';
 
+const graphMode = location.pathname === '/graphs';
 const status = document.querySelector<HTMLElement>('#host-status')!;
 const errorEl = document.querySelector<HTMLElement>('#host-error')!;
 async function start() {
@@ -21,7 +22,13 @@ async function start() {
     { hostContext: { theme: 'light', displayMode: 'inline' } },
   );
   bridge.oncalltool = async (params) => {
-    if (!['get_dialogue', 'submit_selection'].includes(params.name))
+    if (
+      !(
+        graphMode
+          ? ['get_graph_dialogue', 'submit_graph_annotation']
+          : ['get_dialogue', 'submit_selection']
+      ).includes(params.name)
+    )
       throw new Error('Tool is not exposed to the app.');
     return CallToolResultSchema.parse(await client.callTool(params));
   };
@@ -32,7 +39,7 @@ async function start() {
   bridge.onmessage = async (message) => {
     const context = modelContext.structuredContent;
     if (!context?.documentId || !context?.submissionId) return { isError: true };
-    const res = await fetch('/api/respond', {
+    const res = await fetch(graphMode ? '/api/graphs/respond' : '/api/respond', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -61,21 +68,30 @@ async function start() {
     const result = CallToolResultSchema.parse(
       await client.callTool(
         savedId
-          ? { name: 'get_dialogue', arguments: { documentId: savedId } }
-          : { name: 'open_dialogue', arguments: {} },
+          ? {
+              name: graphMode ? 'get_graph_dialogue' : 'get_dialogue',
+              arguments: { documentId: savedId },
+            }
+          : { name: graphMode ? 'open_graph_dialogue' : 'open_dialogue', arguments: {} },
       ),
     );
-    const doc = result.structuredContent?.dialogue as { id?: string } | undefined;
+    const doc = result.structuredContent?.[graphMode ? 'graphDialogue' : 'dialogue'] as
+      { id?: string } | undefined;
     if (doc?.id) {
       const url = new URL(location.href);
       url.searchParams.set('document', doc.id);
       history.replaceState(null, '', url);
+      if (graphMode) {
+        const link = document.querySelector<HTMLAnchorElement>('#docs-link')!;
+        link.href = `/docs/graph?document=${doc.id}`;
+        link.hidden = false;
+      }
     }
     await bridge.sendToolResult(result);
     status.textContent = 'MCP Apps bridge connected';
   };
   await bridge.connect(new PostMessageTransport(iframe.contentWindow!, iframe.contentWindow!));
-  iframe.src = '/widget.html';
+  iframe.src = graphMode ? '/graph-widget.html' : '/widget.html';
 }
 start().catch((error) => {
   status.textContent = 'Connection failed';

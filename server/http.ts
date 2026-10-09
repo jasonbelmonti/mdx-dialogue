@@ -1,3 +1,5 @@
+import { GraphStore } from './graph/store.js';
+import { registerGraphRoutes } from './graph/http.js';
 import express from 'express';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -13,7 +15,12 @@ const runSchema = z.object({
   message: z.unknown(),
   context: z.unknown(),
 });
-export function createHttpApp(store: DialogueStore, origin: string, runner = runCodex) {
+export function createHttpApp(
+  store: DialogueStore,
+  origin: string,
+  runner = runCodex,
+  graphs = new GraphStore(),
+) {
   const app = express();
   let active = false;
   app.use((req, res, next) => {
@@ -27,7 +34,8 @@ export function createHttpApp(store: DialogueStore, origin: string, runner = run
     res.setHeader('X-Content-Type-Options', 'nosniff');
     next();
   });
-  app.use(express.json({ limit: '32kb' }));
+  app.use(express.json({ limit: '256kb' }));
+  registerGraphRoutes(app, graphs);
   app.post('/api/respond', (req, res) => {
     try {
       const input = runSchema.parse(req.body);
@@ -65,7 +73,7 @@ export function createHttpApp(store: DialogueStore, origin: string, runner = run
     }
   });
   app.all('/mcp', async (req, res) => {
-    const server = createMcpServer(store);
+    const server = createMcpServer(store, graphs);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
@@ -88,6 +96,17 @@ export function createHttpApp(store: DialogueStore, origin: string, runner = run
     );
     res.type('html').send(await readFile('dist/widget/widget.html', 'utf8'));
   });
+  app.get('/graph-widget.html', async (_req, res) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'",
+    );
+    res.type('html').send(await readFile('dist/graph-widget/graph-widget.html', 'utf8'));
+  });
+  app.get('/graphs', (_req, res) => {
+    res.sendFile('index.html', { root: resolve('dist/host') });
+  });
+  app.use('/docs', express.static(resolve('site/build'), { extensions: ['html'] }));
   app.use(express.static(resolve('dist/host')));
   app.use(
     (error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
