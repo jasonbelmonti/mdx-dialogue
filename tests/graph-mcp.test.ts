@@ -23,8 +23,17 @@ test('MCP graph tools expose a widget and round-trip prompt, node annotation and
     assert.deepEqual(resource.contents[0]._meta?.['openai/ui'], {
       availableDisplayModes: ['fullscreen'],
     });
-    const legacy = await client.readResource({ uri: 'ui://mdx-dialogue/graphs-v1.html' });
-    assert.deepEqual(legacy.contents[0]._meta, resource.contents[0]._meta);
+    for (const legacyUri of [
+      'ui://mdx-dialogue/graphs-v1.html',
+      'ui://mdx-dialogue/graph-workspace-v4.html',
+      'ui://mdx-dialogue/graph-workspace-v5.html',
+    ]) {
+      assert.notEqual(uri, legacyUri);
+      const legacy = await client.readResource({ uri: legacyUri });
+      assert.deepEqual(legacy.contents[0]._meta, resource.contents[0]._meta);
+      assert.ok('text' in legacy.contents[0] && 'text' in resource.contents[0]);
+      assert.equal(legacy.contents[0].text, resource.contents[0].text);
+    }
     assert.ok('text' in resource.contents[0] && resource.contents[0].text.includes('react-flow'));
     const doc = graphSnapshotSchema.parse(
       (await client.callTool({ name: 'open_graph_dialogue', arguments: {} })).structuredContent,

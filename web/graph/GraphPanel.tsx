@@ -1,8 +1,14 @@
+import { useSyncExternalStore } from 'react';
+import { snapshot, subscribe } from './bridge.js';
 import { GraphDocument } from './GraphDocument.js';
 import { useGraphDialogue } from './useGraphDialogue.js';
 import { WorkspaceControl } from './WorkspaceControl.js';
 import './studio.css';
 export function GraphPanel() {
+  const doc = useSyncExternalStore(subscribe, snapshot);
+  return <GraphSession key={doc?.id ?? 'loading'} />;
+}
+function GraphSession() {
   const state = useGraphDialogue();
   const { doc, selected, annotation, busy, waiting, error } = state;
   if (!doc)

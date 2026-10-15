@@ -1,3 +1,4 @@
+import { documentSelectionMeta, documentStoreMeta } from './document-selection.js';
 import { GraphStore } from './graph/store.js';
 import { registerGraphTools } from './graph/mcp.js';
 import { readFile } from 'node:fs/promises';
@@ -11,7 +12,7 @@ import {
 } from '../shared/dialogue.js';
 import { DialogueStore } from './dialogue-store.js';
 
-export const widgetUri = 'ui://mdx-dialogue/comparison.html';
+export const widgetUri = 'ui://mdx-dialogue/comparison-v4.html';
 export function createMcpServer(store: DialogueStore, graphs = new GraphStore()) {
   const server = new McpServer(
     { name: 'mdx-dialogue', version: '0.1.0' },
@@ -50,21 +51,29 @@ export function createMcpServer(store: DialogueStore, graphs = new GraphStore())
       };
     }
   };
-  server.registerResource(
-    'comparison',
+  for (const resourceUri of [
     widgetUri,
-    { mimeType: 'text/html;profile=mcp-app' },
-    async () => ({
-      contents: [
-        {
-          uri: widgetUri,
-          mimeType: 'text/html;profile=mcp-app',
-          text: await readFile('dist/widget/widget.html', 'utf8'),
-          _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false } },
-        },
-      ],
-    }),
-  );
+    'ui://mdx-dialogue/comparison-v3.html',
+    'ui://mdx-dialogue/comparison-v2.html',
+    'ui://mdx-dialogue/comparison.html',
+  ])
+    server.registerResource(
+      resourceUri === widgetUri ? 'comparison' : 'comparison-legacy',
+      resourceUri,
+      { mimeType: 'text/html;profile=mcp-app' },
+      async () => ({
+        contents: [
+          {
+            uri: resourceUri,
+            mimeType: 'text/html;profile=mcp-app',
+            text: await readFile('dist/widget/widget.html', 'utf8'),
+            _meta: {
+              ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false },
+            },
+          },
+        ],
+      }),
+    );
   server.registerTool(
     'open_dialogue',
     {
@@ -76,7 +85,11 @@ export function createMcpServer(store: DialogueStore, graphs = new GraphStore())
       annotations: mutation,
       _meta: { ui: { resourceUri: widgetUri }, 'openai/ui': { entrypoints: [{ type: 'thread' }] } },
     },
-    async () => guarded(() => answer(store.create())),
+    async () =>
+      guarded(() => {
+        const doc = store.create();
+        return { ...answer(doc), _meta: documentSelectionMeta(store, doc.id) };
+      }),
   );
   server.registerTool(
     'get_dialogue',
@@ -88,7 +101,8 @@ export function createMcpServer(store: DialogueStore, graphs = new GraphStore())
       annotations: readOnly,
       _meta: { ui: { visibility: ['app', 'model'] } },
     },
-    async ({ documentId }) => guarded(() => answer(store.read(documentId))),
+    async ({ documentId }) =>
+      guarded(() => ({ ...answer(store.read(documentId)), _meta: documentStoreMeta(store) })),
   );
   server.registerTool(
     'submit_selection',

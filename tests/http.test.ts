@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
+import { createServer, request } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { DialogueStore } from '../server/dialogue-store.js';
 import { createHttpApp } from '../server/http.js';
@@ -42,6 +42,28 @@ test('local API rejects foreign origins and preserves selection when the real ru
     });
     assert.equal(blocked.status, 403);
     assert.equal(store.submission(doc.id, selection.submissionId).status, 'awaiting-model');
+    const badHost = await new Promise<number | undefined>((resolve, reject) => {
+      const req = request(
+        `${origin}/api/respond`,
+        {
+          method: 'POST',
+          headers: { Host: 'unrelated.example', 'Content-Type': 'application/json' },
+        },
+        (res) => {
+          res.resume();
+          res.on('end', () => resolve(res.statusCode));
+        },
+      );
+      req.on('error', reject);
+      req.end(JSON.stringify(payload));
+    });
+    assert.equal(badHost, 403);
+    const oversized = await fetch(`${origin}/api/respond`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ padding: 'x'.repeat(300_000) }),
+    });
+    assert.equal(oversized.status, 400);
     const accepted = await fetch(`${origin}/api/respond`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: origin },

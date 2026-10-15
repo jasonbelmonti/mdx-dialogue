@@ -25,6 +25,10 @@ The original layout proof remains at **http://127.0.0.1:4317/**. Bookmark a docu
 
 State is saved in `.data/graphs.json` and `.data/dialogues.json`. Each attempt retains request, events, stderr and response receipt under `.data/runs/`. These are ignored by Git. Failures retain the exact annotation, target and submission ID; **Retry saved request** retries that request. Interrupted runs become retryable on server restart.
 
+Both snapshot files use save-before-publish state transitions and atomic replacement. Cooperating writers use an exclusive lock and compare the last loaded bytes before saving; a stale server must restart to reload the winning state. This is single-writer storage, not concurrent editing. If a process crashes during a save, its `.lock` file may remain. Stop all processes using that snapshot, retain a copy of the JSON and leftover temporary files, then remove only that snapshot's stale lock before restarting. Locks are never removed automatically by age. Atomic rename is not a power-loss durability guarantee.
+
+CLI event capture and decoded reply files each have a 2 MB limit. Output overflow kills the child and rejects the attempt; an oversized reply is removed after the child exits, including failed or overflowing attempts. If that cleanup fails, the reported error retains the original child failure and the cleanup error. New attempt directories and server-written evidence use owner-only permissions. If recording a failure also fails, the server logs it and releases the execution slot; repair storage and restart to recover the saved running request. Existing file permissions and historical attempt data are not migrated.
+
 ## A reusable graph vocabulary
 
 The model tool `open_graph_dialogue` describes when a diagram helps: relationships, dependencies, processes and concepts. It accepts an optional `document` so a model can compose an interactive explanation directly, or can open a blank prompt surface. Subsequent node annotations use `respond_to_graph` to update the existing document.
@@ -86,7 +90,7 @@ Refresh the desktop client after installation and return to the same conversatio
 
 The graph requests a persistent workspace using the MCP Apps `fullscreen` display mode. It declares that mode on both the UI resource and initialization, and requests it once when the host advertises support. If the host keeps it inline, **Open beside chat** retries the request. Hosts that do not advertise expansion keep the inline document usable. Collapsing the workspace does not trigger repeated automatic expansion. This applies to the active conversation; restoration after quitting Codex is not implemented.
 
-Widget resources use versioned URIs because native hosts can cache them. After a widget update, refresh the desktop client and reopen the same `documentId` to pick up the new tool/resource metadata. Previously advertised resource URIs remain readable. The header's workspace status distinguishes the new widget from older cached cards. Actual side-panel placement must still be verified in the target host; passing protocol tests does not prove it.
+Widget resources use versioned URIs because native hosts can cache them. After a widget update, refresh the desktop client and reopen the same `documentId` to pick up the new tool/resource metadata. Previously advertised resource URIs remain readable. Opening tools identify an explicit document selection with store-scoped ordered metadata; ordinary result notifications refresh saved state for the active document. Replayed selections and notifications for another document cannot move the workspace back, and notification reads wait for pending saves. The header's workspace status distinguishes the new widget from older cached cards. Actual side-panel placement must still be verified in the target host; passing protocol tests does not prove it.
 
 Verify the actual native panel and incoming message in the same chat, then inspect **View the round trip**: the document ID must stay unchanged, revision must advance, the selected node and submission must match, and the completed submission must report `source: host-model`. A successful install, protocol test, or the standalone `/graphs` browser harness does not establish native host support. Native rendering and same-chat delivery remain unverified until this observation succeeds. If the service stopped during the desktop refresh, restart it using the command above.
 
@@ -108,7 +112,10 @@ Ownership:
 - `shared/graph/`: semantic schemas, graph/MDX validation and model vocabulary.
 - `shared/mdx-syntax.ts`: shared restricted syntax parser.
 - `server/graph/`: graph state transitions, persistence, MCP tools and HTTP dispatch.
-- `server/codex-process.ts`: isolated model invocation and attempt receipts.
+- `server/codex-process.ts`: model request orchestration and attempt receipts.
+- `server/codex-child.ts`, `server/model-response.ts`: bounded child execution and reply decoding.
+- `server/snapshot-storage.ts`: atomic snapshot saves and cooperating-writer conflict detection.
+- `web/bridge/document-state.ts`: current-document selection and asynchronous response ordering.
 - `web/host.ts`: local MCP Apps harness.
 - `web/graph/`: studio, interaction state, bridge and shared graph renderer.
 - `site/`: Docusaurus MDX pages and browser-only saved-document view.

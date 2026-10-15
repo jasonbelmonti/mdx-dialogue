@@ -11,6 +11,7 @@ export type DialogueContextValue = {
   error: string;
   send: () => void;
   retry: () => void;
+  canRetry: boolean;
 };
 export const DialogueContext = createContext<DialogueContextValue | null>(null);
 export function useDialogue() {

@@ -1,8 +1,14 @@
+import { HostDocuments } from './host-documents.js';
+import { DocumentState } from './document-state.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { snapshotSchema, type Dialogue, type Selection } from '../../shared/dialogue.js';
+import {
+  documentStoreEpochKey,
+  documentStoreEpochSchema,
+} from '../../shared/document-selection.js';
 
 export const app = new App({ name: 'MDX Dialogue', version: '0.1.0' }, {}, { autoResize: true });
-let current: Dialogue | null = null;
+const state = new DocumentState<Dialogue>();
 let failure: string | null = null;
 const listeners = new Set<() => void>();
 export const subscribe = (listener: () => void) => {
@@ -11,28 +17,46 @@ export const subscribe = (listener: () => void) => {
     listeners.delete(listener);
   };
 };
-export const snapshot = () => current;
+export const snapshot = state.read;
 export const connectionError = () => failure;
 function emit() {
   for (const listener of listeners) listener();
 }
-function accept(result: { isError?: boolean; content?: unknown; structuredContent?: unknown }) {
+function parseResult(result: {
+  isError?: boolean;
+  content?: unknown;
+  structuredContent?: unknown;
+}) {
   if (result.isError) {
     const content = result.content as { text?: string }[] | undefined;
     throw new Error(
       content?.find((item) => item.text)?.text ?? 'The host rejected this operation.',
     );
   }
-  const parsed = snapshotSchema.parse(result.structuredContent).dialogue as Dialogue;
-  if (!current || parsed.id !== current.id || parsed.revision >= current.revision) current = parsed;
-  emit();
-  return parsed;
+  return snapshotSchema.parse(result.structuredContent).dialogue as Dialogue;
 }
+const documents = new HostDocuments(state, async (documentId) => {
+  await ready;
+  const result = await app.callServerTool({ name: 'get_dialogue', arguments: { documentId } });
+  return {
+    document: parseResult(result),
+    epoch: documentStoreEpochSchema.parse(result._meta?.[documentStoreEpochKey]),
+  };
+});
 app.ontoolresult = (result) => {
   try {
-    accept(result);
-  } catch (error) {
-    failure = String(error);
+    void documents
+      .receive(parseResult(result), result._meta)
+      .then(() => {
+        failure = null;
+        emit();
+      })
+      .catch((e) => {
+        failure = String(e);
+        emit();
+      });
+  } catch (e) {
+    failure = String(e);
     emit();
   }
 };
@@ -53,15 +77,24 @@ export const ready = app
 // Connection failures are rendered in the panel; suppress an unobserved startup rejection.
 void ready.catch(() => {});
 export async function refresh(documentId: string) {
-  await ready;
-  return accept(await app.callServerTool({ name: 'get_dialogue', arguments: { documentId } }));
+  const next = await documents.refresh(documentId);
+  emit();
+  return next;
 }
 export async function submit(selection: Selection) {
-  await ready;
-  return accept(await app.callServerTool({ name: 'submit_selection', arguments: selection }));
+  const next = await documents.save(selection.documentId, async () => {
+    await ready;
+    state.assertSelected(selection.documentId);
+    return parseResult(
+      await app.callServerTool({ name: 'submit_selection', arguments: selection }),
+    );
+  });
+  emit();
+  return next;
 }
 export async function requestResponse(selection: Selection) {
   await ready;
+  state.assertSelected(selection.documentId);
   await app.updateModelContext({
     structuredContent: { ...selection },
     content: [
@@ -71,6 +104,7 @@ export async function requestResponse(selection: Selection) {
       },
     ],
   });
+  state.assertSelected(selection.documentId);
   const result = await app.sendMessage({
     role: 'user',
     content: [

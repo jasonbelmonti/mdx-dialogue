@@ -1,3 +1,9 @@
+import { HostDocuments } from '../bridge/host-documents.js';
+import { DocumentState } from '../bridge/document-state.js';
+import {
+  documentStoreEpochKey,
+  documentStoreEpochSchema,
+} from '../../shared/document-selection.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { createWorkspaceDisplay } from './workspaceDisplay.js';
 import { applyHostTheme } from './hostTheme.js';
@@ -7,7 +13,7 @@ import {
   type GraphInput,
 } from '../../shared/graph/schema.js';
 export const app = new App(
-  { name: 'MDX Graph Studio', version: '0.3.0' },
+  { name: 'MDX Graph Studio', version: '0.3.3' },
   { availableDisplayModes: ['fullscreen'] },
   { autoResize: true },
 );
@@ -16,7 +22,10 @@ app.onhostcontextchanged = (context) => {
   applyHostTheme(context);
   workspaceDisplay.updateContext(context);
 };
-let current: GraphDialogue | null = null;
+const state = new DocumentState<GraphDialogue>((next, current) => {
+  if (next.revision === current.revision) next.content = current.content;
+  return next;
+});
 let error: string | null = null;
 const listeners = new Set<() => void>();
 function emit() {
@@ -28,24 +37,43 @@ export function subscribe(fn: () => void) {
     listeners.delete(fn);
   };
 }
-export const snapshot = () => current;
+export const snapshot = state.read;
 export const connectionError = () => error;
-function accept(result: { isError?: boolean; content?: unknown; structuredContent?: unknown }) {
+function parseResult(result: {
+  isError?: boolean;
+  content?: unknown;
+  structuredContent?: unknown;
+}) {
   if (result.isError)
     throw new Error(
       (result.content as { text?: string }[])?.find((x) => x.text)?.text ??
         'Host rejected the request.',
     );
-  const next = graphSnapshotSchema.parse(result.structuredContent).graphDialogue;
-  if (current?.id === next.id && next.revision < current.revision) return current;
-  if (current?.id === next.id && current.revision === next.revision) next.content = current.content;
-  current = next;
-  emit();
-  return next;
+  return graphSnapshotSchema.parse(result.structuredContent).graphDialogue;
 }
+const documents = new HostDocuments(state, async (documentId) => {
+  await ready;
+  const result = await app.callServerTool({
+    name: 'get_graph_dialogue',
+    arguments: { documentId },
+  });
+  return {
+    document: parseResult(result),
+    epoch: documentStoreEpochSchema.parse(result._meta?.[documentStoreEpochKey]),
+  };
+});
 app.ontoolresult = (result) => {
   try {
-    accept(result);
+    void documents
+      .receive(parseResult(result), result._meta)
+      .then(() => {
+        error = null;
+        emit();
+      })
+      .catch((e) => {
+        error = String(e);
+        emit();
+      });
   } catch (e) {
     error = String(e);
     emit();
@@ -68,15 +96,19 @@ const ready = app
   });
 void ready.catch(() => {});
 export async function refresh(documentId: string) {
-  await ready;
-  return accept(
-    await app.callServerTool({ name: 'get_graph_dialogue', arguments: { documentId } }),
-  );
+  const next = await documents.refresh(documentId);
+  emit();
+  return next;
 }
 export async function deliver(input: GraphInput) {
   await ready;
+  state.assertSelected(input.documentId);
   // Repeating this save is safe even if a previous transport failed after committing it.
-  accept(await app.callServerTool({ name: 'submit_graph_annotation', arguments: input }));
+  await documents.save(input.documentId, async () =>
+    parseResult(await app.callServerTool({ name: 'submit_graph_annotation', arguments: input })),
+  );
+  emit();
+  state.assertSelected(input.documentId);
   await app.updateModelContext({
     structuredContent: { ...input },
     content: [
@@ -86,6 +118,7 @@ export async function deliver(input: GraphInput) {
       },
     ],
   });
+  state.assertSelected(input.documentId);
   const response = await app.sendMessage({
     role: 'user',
     content: [

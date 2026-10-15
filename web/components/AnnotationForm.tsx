@@ -1,9 +1,7 @@
 import { useDialogue } from '../dialogue-context.js';
 export function AnnotationForm() {
-  const { annotation, setAnnotation, send, retry, busy, waiting, error, doc } = useDialogue();
-  const latest = doc.submissions.at(-1);
-  const retryable =
-    latest && latest.status !== 'complete' && Boolean(error || latest.status === 'failed');
+  const { annotation, setAnnotation, send, retry, busy, waiting, error, canRetry } = useDialogue();
+  const retryable = canRetry && Boolean(error);
   return (
     <section className="annotation-form" aria-label="Discuss your selection">
       <label htmlFor="annotation">What would make this work better for you?</label>
