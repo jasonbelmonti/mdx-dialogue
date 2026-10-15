@@ -9,7 +9,7 @@ import {
 } from '../../shared/graph/schema.js';
 import { graphVocabulary } from '../../shared/graph/vocabulary.js';
 import { GraphStore } from './store.js';
-const uri = 'ui://mdx-dialogue/graphs-v1.html';
+const uri = 'ui://mdx-dialogue/graph-workspace-v4.html';
 const mutation = { readOnlyHint: false, destructiveHint: false, openWorldHint: false };
 const answer = (graphDialogue: GraphDialogue) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(graphDialogue) }],
@@ -28,34 +28,48 @@ const guarded = (fn: () => GraphDialogue) => {
   }
 };
 export function registerGraphTools(server: McpServer, store: GraphStore) {
-  server.registerResource(
-    'graph-document',
+  // Keep previously advertised resource URIs readable for connected clients.
+  for (const resourceUri of [
     uri,
-    { mimeType: 'text/html;profile=mcp-app' },
-    async () => ({
-      contents: [
-        {
-          uri,
-          mimeType: 'text/html;profile=mcp-app',
-          text: await readFile('dist/graph-widget/graph-widget.html', 'utf8'),
-          _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false } },
-        },
-      ],
-    }),
-  );
+    'ui://mdx-dialogue/graphs-v1.html',
+    'ui://mdx-dialogue/graph-workspace-v2.html',
+    'ui://mdx-dialogue/graph-workspace-v3.html',
+  ])
+    server.registerResource(
+      resourceUri === uri ? 'graph-document' : `graph-document-${resourceUri.split('/').at(-1)}`,
+      resourceUri,
+      { mimeType: 'text/html;profile=mcp-app' },
+      async () => ({
+        contents: [
+          {
+            uri: resourceUri,
+            mimeType: 'text/html;profile=mcp-app',
+            text: await readFile('dist/graph-widget/graph-widget.html', 'utf8'),
+            _meta: {
+              ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false },
+              'openai/ui': { availableDisplayModes: ['fullscreen'] },
+            },
+          },
+        ],
+      }),
+    );
   server.registerTool(
     'open_graph_dialogue',
     {
       title: 'Open an interactive graph document',
       description:
-        'Use when explaining relationships, dependencies, processes or concepts benefits from an interactive diagram. Compose an initial explanation in document to express an idea visually, or omit it to let the user enter a prompt. Read later node annotations and use respond_to_graph to revise. ' +
+        'Use when explaining relationships, dependencies, processes or concepts benefits from an interactive diagram. Pass documentId to reopen an existing document without creating another one. Otherwise compose an initial explanation in document, or omit both to let the user enter a prompt. Never pass both document and documentId. Read later node annotations and use respond_to_graph to revise the same document. ' +
         graphVocabulary,
-      inputSchema: { document: graphReplySchema.optional() },
+      inputSchema: { document: graphReplySchema.optional(), documentId: z.uuid().optional() },
       outputSchema: graphSnapshotSchema.shape,
       annotations: mutation,
       _meta: { ui: { resourceUri: uri }, 'openai/ui': { entrypoints: [{ type: 'thread' }] } },
     },
-    async ({ document }) => guarded(() => store.create(document)),
+    async ({ document, documentId }) =>
+      guarded(() => {
+        if (document && documentId) throw new Error('Pass document or documentId, not both.');
+        return documentId ? store.read(documentId) : store.create(document);
+      }),
   );
   server.registerTool(
     'get_graph_dialogue',

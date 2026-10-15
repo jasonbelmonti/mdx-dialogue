@@ -64,7 +64,33 @@ npm run mcp:stdio
 
 `scripts/start-mcp.sh` starts the stdio server from any working directory. A compatible native host can use the tools directly, with its model calling `respond_to_graph`; it does not use the local CLI runner. The stdio server keeps state for its process lifetime; HTTP mode persists local state.
 
-`plugin/` remains a development scaffold for a host that can reach `http://127.0.0.1:4317/mcp`. Native ChatGPT/Codex panel installation and same-thread model continuity remain unverified. The local host binds to loopback and rejects foreign hosts/origins. Public hosting, authentication and distribution are outside this prototype.
+`plugin/` is a local development package. The repository marketplace at `.agents/plugins/marketplace.json` exposes it as `mdx-dialogue@mdx-dialogue-local`. It connects to `http://127.0.0.1:4319/mcp`, keeping the native test separate from the original demo on port 4317.
+
+### Native Codex test
+
+Build the web bundles, then keep the local service running in a terminal:
+
+```sh
+PORT=4319 npm start
+```
+
+From this worktree, register and install the package using a Codex CLI that supports plugins:
+
+```sh
+codex plugin marketplace add "$PWD"
+codex plugin add mdx-dialogue@mdx-dialogue-local
+codex plugin list --marketplace mdx-dialogue-local --json
+```
+
+Refresh the desktop client after installation and return to the same conversation. Ask its model to call `open_graph_dialogue`, composing a document or supplying `documentId` to reopen a saved one. Passing both `document` and `documentId` is rejected. Select a node, enter an annotation, and choose **Discuss & revise** in the native panel. The host model should read the saved request and call `respond_to_graph`; that tool updates the same document while the panel refreshes. The native route does not invoke the local CLI model runner.
+
+The graph requests a persistent workspace using the MCP Apps `fullscreen` display mode. It declares that mode on both the UI resource and initialization, and requests it once when the host advertises support. If the host keeps it inline, **Open beside chat** retries the request. Hosts that do not advertise expansion keep the inline document usable. Collapsing the workspace does not trigger repeated automatic expansion. This applies to the active conversation; restoration after quitting Codex is not implemented.
+
+Widget resources use versioned URIs because native hosts can cache them. After a widget update, refresh the desktop client and reopen the same `documentId` to pick up the new tool/resource metadata. Previously advertised resource URIs remain readable. The header's workspace status distinguishes the new widget from older cached cards. Actual side-panel placement must still be verified in the target host; passing protocol tests does not prove it.
+
+Verify the actual native panel and incoming message in the same chat, then inspect **View the round trip**: the document ID must stay unchanged, revision must advance, the selected node and submission must match, and the completed submission must report `source: host-model`. A successful install, protocol test, or the standalone `/graphs` browser harness does not establish native host support. Native rendering and same-chat delivery remain unverified until this observation succeeds. If the service stopped during the desktop refresh, restart it using the command above.
+
+The local host binds to loopback and rejects foreign hosts/origins. Public hosting, authentication and distribution are outside this prototype.
 
 ## Development
 

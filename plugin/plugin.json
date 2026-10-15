@@ -2,5 +2,14 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "mdx-dialogue",
   "version": "0.1.0",
-  "description": "An interactive MDX comparison with structured selection, annotation, and model-authored visual revisions."
+  "description": "Discuss interactive MDX and React Flow documents with the model in your current conversation.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "MDX Dialogue",
+        "shortDescription": "Discuss and revise interactive graph documents",
+        "defaultPrompt": ["Open an MDX Dialogue graph in this conversation."]
+      }
+    }
+  }
 }

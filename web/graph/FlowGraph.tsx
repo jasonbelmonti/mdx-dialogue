@@ -30,16 +30,16 @@ const Idea = memo(function Idea({ data, selected }: NodeProps<IdeaNode>) {
 const nodeTypes = { idea: Idea };
 function layout(graph: Graph): IdeaNode[] {
   const g = new dagre.graphlib.Graph()
-    .setGraph({ rankdir: 'LR', nodesep: 50, ranksep: 90, marginx: 30, marginy: 30 })
+    .setGraph({ rankdir: 'LR', nodesep: 30, ranksep: 70, marginx: 20, marginy: 20 })
     .setDefaultEdgeLabel(() => ({}));
-  graph.nodes.forEach((n) => g.setNode(n.id, { width: 238, height: 130 }));
+  graph.nodes.forEach((n) => g.setNode(n.id, { width: 210, height: 112 }));
   graph.edges.forEach((e) => g.setEdge(e.source, e.target));
   dagre.layout(g);
   return graph.nodes.map((n) => ({
     id: n.id,
     type: 'idea',
     data: n,
-    position: { x: g.node(n.id).x - 119, y: g.node(n.id).y - 65 },
+    position: { x: g.node(n.id).x - 105, y: g.node(n.id).y - 56 },
     ariaLabel: `Select ${n.label}`,
   }));
 }
@@ -78,9 +78,9 @@ export function FlowGraph({
       graph.edges.map((e) => ({
         ...e,
         type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed },
-        labelStyle: { fontSize: 12 },
-        style: { stroke: '#8190a8', strokeWidth: 1.6 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--graph-edge)' },
+        labelStyle: { fontSize: 11, fill: 'var(--graph-muted)' },
+        style: { stroke: 'var(--graph-edge)', strokeWidth: 1.5 },
       })),
     [graph.edges],
   );
@@ -89,7 +89,7 @@ export function FlowGraph({
       <figcaption>
         <strong>{graph.title}</strong>
         <span>
-          {graph.nodes.length} nodes · {graph.edges.length} relationships
+          {graph.nodes.length} nodes · {graph.edges.length} links
         </span>
       </figcaption>
       <div className="flow-canvas">
@@ -106,7 +106,7 @@ export function FlowGraph({
           minZoom={0.2}
           maxZoom={1.8}
         >
-          <Background gap={20} color="#d8dfec" />
+          <Background gap={20} color="var(--graph-grid)" />
           <Controls showInteractive={false} />
         </ReactFlow>
       </div>

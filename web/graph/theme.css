@@ -1,0 +1,27 @@
+/* Shared by the native workspace and the Docusaurus graph renderer. */
+:root {
+  color-scheme: light;
+  --graph-font: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  --graph-bg: var(--color-background-primary, light-dark(#ffffff, #181818));
+  --graph-surface: var(--color-background-secondary, light-dark(#f5f5f5, #212121));
+  --graph-raised: var(--color-background-tertiary, light-dark(#ebebeb, #2a2a2a));
+  --graph-text: var(--color-text-primary, light-dark(#202020, #ededed));
+  --graph-muted: var(--color-text-secondary, light-dark(#606060, #adadad));
+  --graph-border: var(--color-border-secondary, light-dark(#dedede, #383838));
+  --graph-focus: var(--color-ring-primary, light-dark(#4269b5, #9bbcff));
+  --graph-edge: light-dark(#868686, #858585);
+  --graph-grid: light-dark(#d9d9d9, #353535);
+  --graph-danger: var(--color-text-danger, light-dark(#ad3434, #ff9d9d));
+  --graph-concept: light-dark(#6688b4, #839fc2);
+  --graph-process: light-dark(#509088, #7baaa2);
+  --graph-decision: light-dark(#ab8750, #bea06e);
+  --graph-store: light-dark(#9877a9, #aa90ba);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  }
+}

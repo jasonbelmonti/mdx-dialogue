@@ -20,6 +20,11 @@ test('MCP graph tools expose a widget and round-trip prompt, node annotation and
     const uri = (open._meta?.ui as { resourceUri: string }).resourceUri;
     const resource = await client.readResource({ uri });
     assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
+    assert.deepEqual(resource.contents[0]._meta?.['openai/ui'], {
+      availableDisplayModes: ['fullscreen'],
+    });
+    const legacy = await client.readResource({ uri: 'ui://mdx-dialogue/graphs-v1.html' });
+    assert.deepEqual(legacy.contents[0]._meta, resource.contents[0]._meta);
     assert.ok('text' in resource.contents[0] && resource.contents[0].text.includes('react-flow'));
     const doc = graphSnapshotSchema.parse(
       (await client.callTool({ name: 'open_graph_dialogue', arguments: {} })).structuredContent,
@@ -79,6 +84,29 @@ test('MCP graph tools expose a widget and round-trip prompt, node annotation and
     ).graphDialogue;
     assert.deepEqual(read.content, reply);
     assert.deepEqual(read.submissions.at(-1)?.target, target);
+    const reopened = graphSnapshotSchema.parse(
+      (await client.callTool({ name: 'open_graph_dialogue', arguments: { documentId: doc.id } }))
+        .structuredContent,
+    ).graphDialogue;
+    assert.deepEqual(reopened, read);
+    assert.equal(
+      (
+        await client.callTool({
+          name: 'open_graph_dialogue',
+          arguments: { documentId: doc.id, document: reply },
+        })
+      ).isError,
+      true,
+    );
+    assert.equal(
+      (
+        await client.callTool({
+          name: 'open_graph_dialogue',
+          arguments: { documentId: randomUUID() },
+        })
+      ).isError,
+      true,
+    );
     const invalid = await client.callTool({
       name: 'respond_to_graph',
       arguments: {

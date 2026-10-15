@@ -1,14 +1,21 @@
 import { App } from '@modelcontextprotocol/ext-apps';
+import { createWorkspaceDisplay } from './workspaceDisplay.js';
+import { applyHostTheme } from './hostTheme.js';
 import {
   graphSnapshotSchema,
   type GraphDialogue,
   type GraphInput,
 } from '../../shared/graph/schema.js';
 export const app = new App(
-  { name: 'MDX Graph Studio', version: '0.2.0' },
-  {},
+  { name: 'MDX Graph Studio', version: '0.3.0' },
+  { availableDisplayModes: ['fullscreen'] },
   { autoResize: true },
 );
+export const workspaceDisplay = createWorkspaceDisplay(app);
+app.onhostcontextchanged = (context) => {
+  applyHostTheme(context);
+  workspaceDisplay.updateContext(context);
+};
 let current: GraphDialogue | null = null;
 let error: string | null = null;
 const listeners = new Set<() => void>();
@@ -47,9 +54,12 @@ app.ontoolresult = (result) => {
 const ready = app
   .connect()
   .then(() => {
+    applyHostTheme(app.getHostContext() ?? {});
     const caps = app.getHostCapabilities();
     if (!caps?.serverTools || !caps?.message || !caps?.updateModelContext)
       throw new Error('This host requires tool, message and model-context capabilities.');
+    // Placement failure must not prevent using the document or sending an annotation.
+    void workspaceDisplay.initialize();
   })
   .catch((e) => {
     error = String(e);
