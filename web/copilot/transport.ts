@@ -14,8 +14,8 @@ export function createCanvasTransport(token: string): GraphTransport & { close()
   let timer: ReturnType<typeof setTimeout>;
   const emit = () => listeners.forEach((listener) => listener());
   async function request(path: string, input?: GraphInput) {
-    const selected = state.read();
-    const ticket = selected ? state.request(selected.id) : undefined;
+    const selected = state.selectedId();
+    let ticket = selected ? state.request(selected) : undefined;
     const result = await fetch(path, {
       method: input ? 'POST' : 'GET',
       headers: {
@@ -27,7 +27,14 @@ export function createCanvasTransport(token: string): GraphTransport & { close()
     });
     const value = await result.json();
     if (!result.ok) throw new Error(value.error ?? 'Copilot Canvas request failed.');
-    const next = state.accept(graphDialogueSchema.parse(value), ticket);
+    const document = graphDialogueSchema.parse(value);
+    // This capability addresses one Canvas document. Bind its initial response
+    // once; subsequent responses must match that explicit selection.
+    if (!ticket) {
+      if (!state.selectedId()) state.select(document.id);
+      ticket = state.request(state.selectedId()!);
+    }
+    const next = state.accept(document, ticket);
     error = null;
     emit();
     return next;
