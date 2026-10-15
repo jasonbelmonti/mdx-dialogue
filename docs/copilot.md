@@ -47,7 +47,9 @@ The core vocabulary is shared; saved documents are currently separate between Co
 
 ## Compatibility and verification
 
-The Canvas contract was checked against the SDK bundled with Copilot desktop **1.1.25**. GitHub marks Canvas APIs experimental. Controlled tests cover the built, relocated extension entry point, saved-node annotation delivery, valid/invalid/stale replies, retries, session/instance separation, close/reopen and persistence after restart. These are adapter tests; they do not establish native rendering or model behavior in every host version.
+The Canvas contract was checked against the SDK bundled with Copilot desktop **1.1.25**. Native testing on that version on **2026-10-15** verified discovery, rendering, document creation through the panel, and a selected-node revision through the actual Copilot session. The same document advanced from Revision 1 to 3, both responses recorded `source: host-model`, and the requested node description changed while node IDs and links stayed unchanged. This test also exposed and verified the fix for Canvas restoration occurring before session registration completes.
+
+GitHub marks Canvas APIs experimental. Controlled tests additionally cover the built, relocated extension entry point, valid/invalid/stale replies, retries, session/instance separation, close/reopen and persistence after restart. Native verification is bounded to the version and interaction above; it does not establish compatibility with every host version or release readiness.
 
 For native acceptance, observe the panel in Copilot, submit a selected-node annotation, and confirm that the same document ID advances revision with the matching submission and `source: host-model`. Record actual desktop results separately from the automated checks.
 
