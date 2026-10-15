@@ -78,3 +78,41 @@ test('successful exit still requires a bounded valid response and tolerates non-
     /status 2/,
   );
 });
+
+test('failed children remove oversized replies while retaining bounded evidence and original failure', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'mdx-failed-reply-'));
+  const cwd = process.cwd();
+  const bin = process.env.CODEX_BIN;
+  t.after(async () => {
+    process.chdir(cwd);
+    if (bin === undefined) delete process.env.CODEX_BIN;
+    else process.env.CODEX_BIN = bin;
+    await rm(dir, { recursive: true, force: true });
+  });
+  const executable = join(dir, 'codex');
+  process.env.CODEX_BIN = executable;
+  process.chdir(dir);
+  for (const overflow of [false, true]) {
+    await writeFile(
+      executable,
+      `#!${process.execPath}\nconst fs=require('node:fs');\nfs.writeFileSync(process.argv[process.argv.indexOf('--output-last-message')+1], 'x'.repeat(3000000));\n${overflow ? "process.stdout.write('x'.repeat(2100000)); setTimeout(()=>process.exit(0),200);" : "process.stderr.write('controlled failure'); process.exit(2);"}\n`,
+      { mode: 0o700 },
+    );
+    const id = randomUUID();
+    await assert.rejects(
+      runStructuredCodex(
+        'Test',
+        {},
+        { documentId: randomUUID(), submission: { submissionId: id, revision: 1 } },
+        (raw) => raw,
+      ),
+      overflow ? /output.*limit/i : /status 2/,
+    );
+    const [attempt] = await readdir(join(dir, '.data/runs', id));
+    const path = join(dir, '.data/runs', id, attempt);
+    await assert.rejects(stat(join(path, 'response.json')), { code: 'ENOENT' });
+    assert.ok((await stat(join(path, 'events.jsonl'))).size <= 2000000);
+    if (!overflow)
+      assert.match(await readFile(join(path, 'stderr.log'), 'utf8'), /controlled failure/);
+  }
+});

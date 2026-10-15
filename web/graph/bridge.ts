@@ -1,3 +1,4 @@
+import { HostDocuments } from '../bridge/host-documents.js';
 import { DocumentState } from '../bridge/document-state.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { createWorkspaceDisplay } from './workspaceDisplay.js';
@@ -8,7 +9,7 @@ import {
   type GraphInput,
 } from '../../shared/graph/schema.js';
 export const app = new App(
-  { name: 'MDX Graph Studio', version: '0.3.1' },
+  { name: 'MDX Graph Studio', version: '0.3.2' },
   { availableDisplayModes: ['fullscreen'] },
   { autoResize: true },
 );
@@ -34,26 +35,36 @@ export function subscribe(fn: () => void) {
 }
 export const snapshot = state.read;
 export const connectionError = () => error;
-function accept(
-  result: { isError?: boolean; content?: unknown; structuredContent?: unknown },
-  request?: ReturnType<typeof state.request>,
-) {
+function parseResult(result: {
+  isError?: boolean;
+  content?: unknown;
+  structuredContent?: unknown;
+}) {
   if (result.isError)
     throw new Error(
       (result.content as { text?: string }[])?.find((x) => x.text)?.text ??
         'Host rejected the request.',
     );
-  const next = state.accept(
-    graphSnapshotSchema.parse(result.structuredContent).graphDialogue,
-    request,
-  );
-  error = null;
-  emit();
-  return next;
+  return graphSnapshotSchema.parse(result.structuredContent).graphDialogue;
 }
+const documents = new HostDocuments(state, async (documentId) => {
+  await ready;
+  return parseResult(
+    await app.callServerTool({ name: 'get_graph_dialogue', arguments: { documentId } }),
+  );
+});
 app.ontoolresult = (result) => {
   try {
-    accept(result);
+    void documents
+      .receive(parseResult(result), result._meta)
+      .then(() => {
+        error = null;
+        emit();
+      })
+      .catch((e) => {
+        error = String(e);
+        emit();
+      });
   } catch (e) {
     error = String(e);
     emit();
@@ -76,19 +87,18 @@ const ready = app
   });
 void ready.catch(() => {});
 export async function refresh(documentId: string) {
-  const request = state.request(documentId);
-  await ready;
-  return accept(
-    await app.callServerTool({ name: 'get_graph_dialogue', arguments: { documentId } }),
-    request,
-  );
+  const next = await documents.refresh(documentId);
+  emit();
+  return next;
 }
 export async function deliver(input: GraphInput) {
-  const request = state.request(input.documentId);
   await ready;
   state.assertSelected(input.documentId);
   // Repeating this save is safe even if a previous transport failed after committing it.
-  accept(await app.callServerTool({ name: 'submit_graph_annotation', arguments: input }), request);
+  await documents.save(input.documentId, async () =>
+    parseResult(await app.callServerTool({ name: 'submit_graph_annotation', arguments: input })),
+  );
+  emit();
   state.assertSelected(input.documentId);
   await app.updateModelContext({
     structuredContent: { ...input },

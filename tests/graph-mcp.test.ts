@@ -26,6 +26,7 @@ test('MCP graph tools expose a widget and round-trip prompt, node annotation and
     for (const legacyUri of [
       'ui://mdx-dialogue/graphs-v1.html',
       'ui://mdx-dialogue/graph-workspace-v4.html',
+      'ui://mdx-dialogue/graph-workspace-v5.html',
     ]) {
       assert.notEqual(uri, legacyUri);
       const legacy = await client.readResource({ uri: legacyUri });

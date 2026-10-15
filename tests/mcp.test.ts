@@ -18,6 +18,9 @@ test('real MCP client discovers widget, records input, accepts model MDX, and ob
     const open = listed.tools.find((t) => t.name === 'open_dialogue')!;
     assert.deepEqual(open._meta?.ui, { resourceUri: widgetUri });
     const widget = await client.readResource({ uri: widgetUri });
+    const previous = await client.readResource({ uri: 'ui://mdx-dialogue/comparison-v2.html' });
+    assert.ok('text' in previous.contents[0] && 'text' in widget.contents[0]);
+    assert.equal(previous.contents[0].text, widget.contents[0].text);
     const legacy = await client.readResource({ uri: 'ui://mdx-dialogue/comparison.html' });
     assert.notEqual(widgetUri, 'ui://mdx-dialogue/comparison.html');
     assert.ok('text' in legacy.contents[0] && 'text' in widget.contents[0]);

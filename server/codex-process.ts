@@ -1,4 +1,4 @@
-import { readModelResponse } from './model-response.js';
+import { discardOversizedResponse, readModelResponse } from './model-response.js';
 import { runCodexChild } from './codex-child.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -50,7 +50,20 @@ export async function runStructuredCodex<T>(
     { mode: 0o600 },
   );
   const startedAt = new Date().toISOString();
-  const events = await runCodexChild(process.env.CODEX_BIN ?? 'codex', args, runDir, prompt);
+  let events: string;
+  try {
+    events = await runCodexChild(process.env.CODEX_BIN ?? 'codex', args, runDir, prompt);
+  } catch (error) {
+    try {
+      await discardOversizedResponse(outputFile);
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        `${error instanceof Error ? error.message : String(error)} Oversized-reply cleanup also failed: ${String(cleanupError)}`,
+      );
+    }
+    throw error;
+  }
   const reply = validate(await readModelResponse(outputFile));
   const parsedEvents = events
     .split('\n')

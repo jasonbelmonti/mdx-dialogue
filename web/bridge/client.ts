@@ -1,3 +1,4 @@
+import { HostDocuments } from './host-documents.js';
 import { DocumentState } from './document-state.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { snapshotSchema, type Dialogue, type Selection } from '../../shared/dialogue.js';
@@ -17,29 +18,37 @@ export const connectionError = () => failure;
 function emit() {
   for (const listener of listeners) listener();
 }
-function accept(
-  result: { isError?: boolean; content?: unknown; structuredContent?: unknown },
-  request?: ReturnType<typeof state.request>,
-) {
+function parseResult(result: {
+  isError?: boolean;
+  content?: unknown;
+  structuredContent?: unknown;
+}) {
   if (result.isError) {
     const content = result.content as { text?: string }[] | undefined;
     throw new Error(
       content?.find((item) => item.text)?.text ?? 'The host rejected this operation.',
     );
   }
-  const next = state.accept(
-    snapshotSchema.parse(result.structuredContent).dialogue as Dialogue,
-    request,
-  );
-  failure = null;
-  emit();
-  return next;
+  return snapshotSchema.parse(result.structuredContent).dialogue as Dialogue;
 }
+const documents = new HostDocuments(state, async (documentId) => {
+  await ready;
+  return parseResult(await app.callServerTool({ name: 'get_dialogue', arguments: { documentId } }));
+});
 app.ontoolresult = (result) => {
   try {
-    accept(result);
-  } catch (error) {
-    failure = String(error);
+    void documents
+      .receive(parseResult(result), result._meta)
+      .then(() => {
+        failure = null;
+        emit();
+      })
+      .catch((e) => {
+        failure = String(e);
+        emit();
+      });
+  } catch (e) {
+    failure = String(e);
     emit();
   }
 };
@@ -60,21 +69,20 @@ export const ready = app
 // Connection failures are rendered in the panel; suppress an unobserved startup rejection.
 void ready.catch(() => {});
 export async function refresh(documentId: string) {
-  const request = state.request(documentId);
-  await ready;
-  return accept(
-    await app.callServerTool({ name: 'get_dialogue', arguments: { documentId } }),
-    request,
-  );
+  const next = await documents.refresh(documentId);
+  emit();
+  return next;
 }
 export async function submit(selection: Selection) {
-  const request = state.request(selection.documentId);
-  await ready;
-  state.assertSelected(selection.documentId);
-  return accept(
-    await app.callServerTool({ name: 'submit_selection', arguments: selection }),
-    request,
-  );
+  const next = await documents.save(selection.documentId, async () => {
+    await ready;
+    state.assertSelected(selection.documentId);
+    return parseResult(
+      await app.callServerTool({ name: 'submit_selection', arguments: selection }),
+    );
+  });
+  emit();
+  return next;
 }
 export async function requestResponse(selection: Selection) {
   await ready;
