@@ -1,3 +1,4 @@
+import { settleResponse } from './response-job.js';
 import { GraphStore } from './graph/store.js';
 import { registerGraphRoutes } from './graph/http.js';
 import express from 'express';
@@ -52,20 +53,18 @@ export function createHttpApp(
       active = true;
       res.status(202).json({ accepted: true });
       const hostInput: HostInput = { message: input.message, context: input.context };
-      void runner(store.read(input.documentId), sub, hostInput)
-        .then((reply) => {
+      void settleResponse({
+        run: () => runner(store.read(input.documentId), sub, hostInput),
+        complete: (reply) => {
           store.complete(input.documentId, input.submissionId, reply, 'codex-cli');
-        })
-        .catch((error) => {
-          store.fail(
-            input.documentId,
-            input.submissionId,
-            error instanceof Error ? error.message : 'Model response failed.',
-          );
-        })
-        .finally(() => {
+        },
+        fail: (message) => {
+          store.fail(input.documentId, input.submissionId, message);
+        },
+        release: () => {
           active = false;
-        });
+        },
+      });
     } catch (error) {
       res
         .status(400)

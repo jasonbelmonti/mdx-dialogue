@@ -25,6 +25,10 @@ The original layout proof remains at **http://127.0.0.1:4317/**. Bookmark a docu
 
 State is saved in `.data/graphs.json` and `.data/dialogues.json`. Each attempt retains request, events, stderr and response receipt under `.data/runs/`. These are ignored by Git. Failures retain the exact annotation, target and submission ID; **Retry saved request** retries that request. Interrupted runs become retryable on server restart.
 
+Both snapshot files use save-before-publish state transitions and atomic replacement. Cooperating writers use an exclusive lock and compare the last loaded bytes before saving; a stale server must restart to reload the winning state. This is single-writer storage, not concurrent editing. If a process crashes during a save, its `.lock` file may remain. Stop all processes using that snapshot, retain a copy of the JSON and leftover temporary files, then remove only that snapshot's stale lock before restarting. Locks are never removed automatically by age. Atomic rename is not a power-loss durability guarantee.
+
+CLI event capture and decoded reply files each have a 2 MB limit. Output overflow kills the child and rejects the attempt; an oversized reply is removed after the child exits. New attempt directories and server-written evidence use owner-only permissions. If recording a failure also fails, the server logs it and releases the execution slot; repair storage and restart to recover the saved running request. Existing file permissions and historical attempt data are not migrated.
+
 ## A reusable graph vocabulary
 
 The model tool `open_graph_dialogue` describes when a diagram helps: relationships, dependencies, processes and concepts. It accepts an optional `document` so a model can compose an interactive explanation directly, or can open a blank prompt surface. Subsequent node annotations use `respond_to_graph` to update the existing document.
@@ -108,7 +112,10 @@ Ownership:
 - `shared/graph/`: semantic schemas, graph/MDX validation and model vocabulary.
 - `shared/mdx-syntax.ts`: shared restricted syntax parser.
 - `server/graph/`: graph state transitions, persistence, MCP tools and HTTP dispatch.
-- `server/codex-process.ts`: isolated model invocation and attempt receipts.
+- `server/codex-process.ts`: model request orchestration and attempt receipts.
+- `server/codex-child.ts`, `server/model-response.ts`: bounded child execution and reply decoding.
+- `server/snapshot-storage.ts`: atomic snapshot saves and cooperating-writer conflict detection.
+- `web/bridge/document-state.ts`: current-document selection and asynchronous response ordering.
 - `web/host.ts`: local MCP Apps harness.
 - `web/graph/`: studio, interaction state, bridge and shared graph renderer.
 - `site/`: Docusaurus MDX pages and browser-only saved-document view.

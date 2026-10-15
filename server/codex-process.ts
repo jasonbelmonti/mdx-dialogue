@@ -1,6 +1,7 @@
-import { spawn } from 'node:child_process';
+import { readModelResponse } from './model-response.js';
+import { runCodexChild } from './codex-child.js';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 type RecordInput = {
@@ -15,10 +16,10 @@ export async function runStructuredCodex<T>(
   validate: (raw: unknown) => T,
 ): Promise<T> {
   const runDir = resolve('.data/runs', record.submission.submissionId, randomUUID());
-  await mkdir(runDir, { recursive: true });
+  await mkdir(runDir, { recursive: true, mode: 0o700 });
   const schemaFile = join(runDir, 'response-schema.json');
   const outputFile = join(runDir, 'response.json');
-  await writeFile(schemaFile, JSON.stringify(schema, null, 2));
+  await writeFile(schemaFile, JSON.stringify(schema, null, 2), { mode: 0o600 });
   const args = [
     'exec',
     '--ignore-user-config',
@@ -46,69 +47,18 @@ export async function runStructuredCodex<T>(
   await writeFile(
     join(runDir, 'request.json'),
     JSON.stringify({ args, ...record, prompt }, null, 2),
+    { mode: 0o600 },
   );
   const startedAt = new Date().toISOString();
-  const events = await new Promise<string>((resolveRun, reject) => {
-    const child = spawn(process.env.CODEX_BIN ?? 'codex', args, {
-      cwd: runDir,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    let stdout = '',
-      stderr = '',
-      timedOut = false;
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      child.kill('SIGTERM');
-    }, 180_000);
-    const forceKill = setTimeout(() => child.kill('SIGKILL'), 185_000);
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk;
-      if (stdout.length > 2_000_000) child.kill('SIGTERM');
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr = (stderr + chunk).slice(-20_000);
-    });
-    child.on('error', (error) => {
-      clearTimeout(timeout);
-      clearTimeout(forceKill);
-      reject(new Error(`Could not start Codex: ${error.message}`));
-    });
-    child.on('close', async (code) => {
-      clearTimeout(timeout);
-      clearTimeout(forceKill);
-      try {
-        await Promise.all([
-          writeFile(join(runDir, 'events.jsonl'), stdout),
-          writeFile(join(runDir, 'stderr.log'), stderr),
-        ]);
-      } catch (error) {
-        reject(new Error(`Could not save model attempt evidence: ${String(error)}`));
-        return;
-      }
-      if (timedOut)
-        reject(
-          new Error(
-            'Codex did not respond within three minutes. Your input is saved; retry the response.',
-          ),
-        );
-      else if (code !== 0)
-        reject(
-          new Error(
-            `Codex exited with status ${code}. Check codex login status and ${join(runDir, 'stderr.log')}, then retry.`,
-          ),
-        );
-      else resolveRun(stdout);
-    });
-    child.stdin.on('error', () => {});
-    child.stdin.end(prompt);
-  });
-  const reply = validate(JSON.parse(await readFile(outputFile, 'utf8')));
+  const events = await runCodexChild(process.env.CODEX_BIN ?? 'codex', args, runDir, prompt);
+  const reply = validate(await readModelResponse(outputFile));
   const parsedEvents = events
     .split('\n')
     .filter(Boolean)
     .flatMap((line) => {
       try {
-        return [JSON.parse(line)];
+        const event = JSON.parse(line);
+        return event && typeof event === 'object' && typeof event.type === 'string' ? [event] : [];
       } catch {
         return [];
       }
@@ -129,6 +79,7 @@ export async function runStructuredCodex<T>(
       null,
       2,
     ),
+    { mode: 0o600 },
   );
   return reply;
 }

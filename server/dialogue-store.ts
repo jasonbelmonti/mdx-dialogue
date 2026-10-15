@@ -16,18 +16,23 @@ export class DialogueStore {
     initial: Dialogue[] = [],
     private save: (docs: Dialogue[]) => void = () => {},
   ) {
-    for (const doc of initial) {
+    for (const original of initial) {
+      const doc = structuredClone(original);
       for (const submission of doc.submissions) {
         if (submission.status === 'running') {
           submission.status = 'failed';
           submission.error = 'The local server restarted. Retry your saved submission.';
         }
       }
-      this.documents.set(doc.id, structuredClone(doc));
+      this.documents.set(doc.id, doc);
     }
   }
-  private persist() {
-    this.save([...this.documents.values()]);
+  private commit(doc: Dialogue) {
+    const next = new Map(this.documents);
+    next.set(doc.id, doc);
+    this.save([...next.values()]);
+    this.documents = next;
+    return this.read(doc.id);
   }
   create(): Dialogue {
     if (this.documents.size >= 100)
@@ -35,9 +40,7 @@ export class DialogueStore {
         'Prototype limit of 100 saved dialogues reached. Reopen an existing dialogue.',
       );
     const doc: Dialogue = { id: randomUUID(), revision: 1, options, submissions: [] };
-    this.documents.set(doc.id, doc);
-    this.persist();
-    return this.read(doc.id);
+    return this.commit(doc);
   }
   private get(id: string): Dialogue {
     const doc = this.documents.get(id);
@@ -49,7 +52,7 @@ export class DialogueStore {
   }
   submit(input: Selection): Dialogue {
     const selection = selectionSchema.parse(input);
-    const doc = this.get(selection.documentId);
+    const doc = this.read(selection.documentId);
     const existing = doc.submissions.find((s) => s.submissionId === selection.submissionId);
     if (existing) {
       if (
@@ -71,8 +74,7 @@ export class DialogueStore {
       status: 'awaiting-model',
       createdAt: new Date().toISOString(),
     });
-    this.persist();
-    return this.read(doc.id);
+    return this.commit(doc);
   }
   submission(id: string, submissionId: string): Submission {
     const entry = this.get(id).submissions.find((s) => s.submissionId === submissionId);
@@ -80,13 +82,12 @@ export class DialogueStore {
     return structuredClone(entry);
   }
   begin(id: string, submissionId: string): boolean {
-    const entry = this.mutableSubmission(id, submissionId);
-    if (entry.status === 'running' || entry.status === 'complete') return false;
-    if (entry.revision !== this.get(id).revision)
-      throw new Error('Submission targets an outdated revision.');
+    const doc = this.read(id);
+    const entry = this.pending(doc, submissionId);
+    if (entry.status === 'running') return false;
     entry.status = 'running';
     delete entry.error;
-    this.persist();
+    this.commit(doc);
     return true;
   }
   complete(
@@ -95,10 +96,8 @@ export class DialogueStore {
     reply: ModelReply,
     source: 'codex-cli' | 'host-model',
   ): Dialogue {
-    const doc = this.get(id);
-    const entry = this.mutableSubmission(id, submissionId);
-    if (entry.status === 'complete') throw new Error('Submission already completed.');
-    if (entry.revision !== doc.revision) throw new Error('Response targets an outdated revision.');
+    const doc = this.read(id);
+    const entry = this.pending(doc, submissionId);
     const checked = modelReplySchema.parse(reply);
     parseReplyMdx(checked.mdx);
     Object.assign(entry, {
@@ -109,20 +108,21 @@ export class DialogueStore {
     });
     delete entry.error;
     doc.revision++;
-    this.persist();
-    return this.read(id);
+    return this.commit(doc);
   }
   fail(id: string, submissionId: string, error: string): Dialogue {
-    const entry = this.mutableSubmission(id, submissionId);
-    if (entry.status === 'complete') throw new Error('Completed response cannot be failed.');
+    const doc = this.read(id);
+    const entry = this.pending(doc, submissionId);
     entry.status = 'failed';
     entry.error = error;
-    this.persist();
-    return this.read(id);
+    return this.commit(doc);
   }
-  private mutableSubmission(id: string, submissionId: string) {
-    const entry = this.get(id).submissions.find((s) => s.submissionId === submissionId);
+  private pending(doc: Dialogue, submissionId: string) {
+    const entry = doc.submissions.find((s) => s.submissionId === submissionId);
     if (!entry) throw new Error('Submission not found.');
+    if (entry.status === 'complete') throw new Error('Submission already completed.');
+    if (entry !== doc.submissions.at(-1) || entry.revision !== doc.revision)
+      throw new Error('Response targets an outdated submission or revision.');
     return entry;
   }
 }

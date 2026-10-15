@@ -1,3 +1,4 @@
+import { DocumentState } from '../bridge/document-state.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { createWorkspaceDisplay } from './workspaceDisplay.js';
 import { applyHostTheme } from './hostTheme.js';
@@ -7,7 +8,7 @@ import {
   type GraphInput,
 } from '../../shared/graph/schema.js';
 export const app = new App(
-  { name: 'MDX Graph Studio', version: '0.3.0' },
+  { name: 'MDX Graph Studio', version: '0.3.1' },
   { availableDisplayModes: ['fullscreen'] },
   { autoResize: true },
 );
@@ -16,7 +17,10 @@ app.onhostcontextchanged = (context) => {
   applyHostTheme(context);
   workspaceDisplay.updateContext(context);
 };
-let current: GraphDialogue | null = null;
+const state = new DocumentState<GraphDialogue>((next, current) => {
+  if (next.revision === current.revision) next.content = current.content;
+  return next;
+});
 let error: string | null = null;
 const listeners = new Set<() => void>();
 function emit() {
@@ -28,18 +32,22 @@ export function subscribe(fn: () => void) {
     listeners.delete(fn);
   };
 }
-export const snapshot = () => current;
+export const snapshot = state.read;
 export const connectionError = () => error;
-function accept(result: { isError?: boolean; content?: unknown; structuredContent?: unknown }) {
+function accept(
+  result: { isError?: boolean; content?: unknown; structuredContent?: unknown },
+  request?: ReturnType<typeof state.request>,
+) {
   if (result.isError)
     throw new Error(
       (result.content as { text?: string }[])?.find((x) => x.text)?.text ??
         'Host rejected the request.',
     );
-  const next = graphSnapshotSchema.parse(result.structuredContent).graphDialogue;
-  if (current?.id === next.id && next.revision < current.revision) return current;
-  if (current?.id === next.id && current.revision === next.revision) next.content = current.content;
-  current = next;
+  const next = state.accept(
+    graphSnapshotSchema.parse(result.structuredContent).graphDialogue,
+    request,
+  );
+  error = null;
   emit();
   return next;
 }
@@ -68,15 +76,20 @@ const ready = app
   });
 void ready.catch(() => {});
 export async function refresh(documentId: string) {
+  const request = state.request(documentId);
   await ready;
   return accept(
     await app.callServerTool({ name: 'get_graph_dialogue', arguments: { documentId } }),
+    request,
   );
 }
 export async function deliver(input: GraphInput) {
+  const request = state.request(input.documentId);
   await ready;
+  state.assertSelected(input.documentId);
   // Repeating this save is safe even if a previous transport failed after committing it.
-  accept(await app.callServerTool({ name: 'submit_graph_annotation', arguments: input }));
+  accept(await app.callServerTool({ name: 'submit_graph_annotation', arguments: input }), request);
+  state.assertSelected(input.documentId);
   await app.updateModelContext({
     structuredContent: { ...input },
     content: [
@@ -86,6 +99,7 @@ export async function deliver(input: GraphInput) {
       },
     ],
   });
+  state.assertSelected(input.documentId);
   const response = await app.sendMessage({
     role: 'user',
     content: [

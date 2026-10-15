@@ -19,18 +19,24 @@ import type { Layout, Selection } from '../shared/dialogue.js';
 const components = { Comparison, AnnotationForm, ModelReply };
 export function DialoguePanel() {
   const doc = useSyncExternalStore(subscribe, snapshot);
+  return <DialogueSession key={doc?.id ?? 'loading'} />;
+}
+function DialogueSession() {
+  const doc = useSyncExternalStore(subscribe, snapshot);
   const startupError = useSyncExternalStore(subscribe, connectionError);
   const [selected, select] = useState<Layout>('split');
   const [annotation, setAnnotation] = useState('');
   const [busy, setBusy] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState('');
+  const [retryInput, setRetryInput] = useState<Selection | null>(null);
   const pending = doc?.submissions.at(-1);
 
   useEffect(() => {
     if (!doc) return;
     const latest = doc.submissions.at(-1);
     if (latest) {
+      setRetryInput(latest.status === 'complete' ? null : latest);
       select(latest.selectedId);
       setAnnotation(latest.annotation);
       setError(latest.status === 'failed' ? (latest.error ?? 'Response failed.') : '');
@@ -49,6 +55,8 @@ export function DialoguePanel() {
         if (cancelled) return;
         const entry = next.submissions.find((s) => s.submissionId === pending!.submissionId);
         if (entry?.status === 'complete') {
+          setRetryInput(null);
+          setError('');
           setWaiting(false);
           return;
         }
@@ -76,11 +84,13 @@ export function DialoguePanel() {
     };
   }, [doc?.id, pending?.submissionId, pending?.status, waiting]);
 
-  async function deliver(selection: Selection, record: boolean) {
+  async function deliver(selection: Selection) {
+    setRetryInput(selection);
     setBusy(true);
     setError('');
     try {
-      if (record) await submit(selection);
+      // Repeat the same identity when a save acknowledgement was lost.
+      await submit(selection);
       await requestResponse(selection);
       setWaiting(true);
     } catch (e) {
@@ -91,19 +101,16 @@ export function DialoguePanel() {
   }
   function send() {
     if (!doc || busy || waiting) return;
-    void deliver(
-      {
-        documentId: doc.id,
-        revision: doc.revision,
-        submissionId: crypto.randomUUID(),
-        selectedId: selected,
-        annotation,
-      },
-      true,
-    );
+    void deliver({
+      documentId: doc.id,
+      revision: doc.revision,
+      submissionId: crypto.randomUUID(),
+      selectedId: selected,
+      annotation,
+    });
   }
   function retry() {
-    if (pending && !busy) void deliver(pending, false);
+    if (retryInput && !busy && !waiting) void deliver(retryInput);
   }
   if (!doc)
     return (
@@ -124,6 +131,7 @@ export function DialoguePanel() {
         error,
         send,
         retry,
+        canRetry: !!retryInput,
       }}
     >
       <main className="document">

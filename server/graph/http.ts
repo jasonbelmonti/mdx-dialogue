@@ -1,3 +1,4 @@
+import { settleResponse } from '../response-job.js';
 import type { Express } from 'express';
 import { z } from 'zod';
 import { GraphStore } from './store.js';
@@ -35,27 +36,22 @@ export function registerGraphRoutes(app: Express, store: GraphStore, runner = ru
       store.begin(input.documentId, input.submissionId);
       active = true;
       res.status(202).json({ accepted: true });
-      void runner(store.read(input.documentId), sub, {
-        message: input.message,
-        context: input.context,
-      })
-        .then((reply) => {
+      void settleResponse({
+        run: () =>
+          runner(store.read(input.documentId), sub, {
+            message: input.message,
+            context: input.context,
+          }),
+        complete: (reply) => {
           store.complete(input.documentId, input.submissionId, reply, 'codex-cli');
-        })
-        .catch((error) => {
-          try {
-            store.fail(
-              input.documentId,
-              input.submissionId,
-              error instanceof Error ? error.message : 'Model response failed.',
-            );
-          } catch {
-            /* A newer accepted reply superseded this attempt. */
-          }
-        })
-        .finally(() => {
+        },
+        fail: (message) => {
+          store.fail(input.documentId, input.submissionId, message);
+        },
+        release: () => {
           active = false;
-        });
+        },
+      });
     } catch (error) {
       res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request.' });
     }

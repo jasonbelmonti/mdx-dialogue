@@ -9,7 +9,7 @@ import {
 } from '../../shared/graph/schema.js';
 import { graphVocabulary } from '../../shared/graph/vocabulary.js';
 import { GraphStore } from './store.js';
-const uri = 'ui://mdx-dialogue/graph-workspace-v4.html';
+const uri = 'ui://mdx-dialogue/graph-workspace-v5.html';
 const mutation = { readOnlyHint: false, destructiveHint: false, openWorldHint: false };
 const answer = (graphDialogue: GraphDialogue) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(graphDialogue) }],
@@ -34,6 +34,7 @@ export function registerGraphTools(server: McpServer, store: GraphStore) {
     'ui://mdx-dialogue/graphs-v1.html',
     'ui://mdx-dialogue/graph-workspace-v2.html',
     'ui://mdx-dialogue/graph-workspace-v3.html',
+    'ui://mdx-dialogue/graph-workspace-v4.html',
   ])
     server.registerResource(
       resourceUri === uri ? 'graph-document' : `graph-document-${resourceUri.split('/').at(-1)}`,
