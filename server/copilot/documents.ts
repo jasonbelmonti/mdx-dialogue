@@ -17,7 +17,13 @@ export interface CopilotSession {
   sessionId: string;
   send(options: { prompt: string }): Promise<string>;
 }
-type Instance = CanvasIdentity & { store: GraphStore; documentId: string; token: string };
+type Instance = CanvasIdentity & {
+  store: GraphStore;
+  documentId: string;
+  token: string;
+  active: boolean;
+  pendingDeliveries: number;
+};
 
 /** Each host session/instance owns one durable document and one revocable UI capability. */
 export class CanvasDocuments {
@@ -40,29 +46,52 @@ export class CanvasDocuments {
   open(identity: CanvasIdentity, initial?: unknown) {
     const key = this.key(identity);
     const existing = this.instances.get(key);
-    if (existing) return existing;
-    if (this.instances.size >= 20) throw new Error('Close a Canvas before opening another.');
+    if (existing?.active) return existing;
+    if ([...this.instances.values()].filter((instance) => instance.active).length >= 20)
+      throw new Error('Close a Canvas before opening another.');
+    if (existing) {
+      existing.token = randomBytes(32).toString('hex');
+      existing.active = true;
+      return existing;
+    }
     const storage = snapshotStorage(join(this.directory, `${key}.json`), (value) =>
       z.array(graphDialogueSchema).max(1).parse(value),
     );
     const store = new GraphStore(storage.initial, storage.save);
     const documentId = storage.initial[0]?.id ?? store.create(initial).id;
-    const instance = { ...identity, store, documentId, token: randomBytes(32).toString('hex') };
+    const instance = {
+      ...identity,
+      store,
+      documentId,
+      token: randomBytes(32).toString('hex'),
+      active: true,
+      pendingDeliveries: 0,
+    };
     this.instances.set(key, instance);
     return instance;
   }
   get(identity: CanvasIdentity) {
     const instance = this.instances.get(this.key(identity));
-    if (!instance) throw new Error('Open this Canvas instance first.');
+    if (!instance?.active) throw new Error('Open this Canvas instance first.');
     return instance;
   }
   authorize(token: string) {
-    const instance = [...this.instances.values()].find((value) => value.token === token);
+    const instance = [...this.instances.values()].find(
+      (value) => value.active && value.token === token,
+    );
     if (!instance) throw new Error('Canvas access expired. Reopen it from Copilot.');
     return instance;
   }
   close(identity: CanvasIdentity) {
-    this.instances.delete(this.key(identity));
+    const key = this.key(identity);
+    const instance = this.instances.get(key);
+    if (!instance) return;
+    instance.active = false;
+    this.release(key, instance);
+  }
+  private release(key: string, instance: Instance) {
+    // A pending delivery still owns the snapshot writer; reopening must reuse it.
+    if (!instance.active && instance.pendingDeliveries === 0) this.instances.delete(key);
   }
   read(identity: CanvasIdentity) {
     const { store, documentId } = this.get(identity);
@@ -82,14 +111,16 @@ export class CanvasDocuments {
     const key = `${instance.documentId}/${input.submissionId}`;
     let delivery = this.deliveries.get(key);
     if (!delivery) {
-      delivery = this.send(instance, input);
+      const instanceKey = this.key(identity);
+      instance.pendingDeliveries++;
+      delivery = this.send(instance, input).finally(() => {
+        if (this.deliveries.get(key) === delivery) this.deliveries.delete(key);
+        instance.pendingDeliveries--;
+        this.release(instanceKey, instance);
+      });
       this.deliveries.set(key, delivery);
     }
-    try {
-      await delivery;
-    } finally {
-      if (this.deliveries.get(key) === delivery) this.deliveries.delete(key);
-    }
+    await delivery;
     return instance.store.read(instance.documentId);
   }
   private async send(instance: Instance, input: GraphInput) {

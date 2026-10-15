@@ -1,11 +1,12 @@
 import { build } from 'esbuild';
 import { copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 const directory = new URL('../dist/copilot/mdx-dialogue/', import.meta.url);
 await mkdir(directory, { recursive: true });
 await build({
   entryPoints: ['copilot/extension.mjs'],
-  outfile: new URL('extension.mjs', directory).pathname,
+  outfile: fileURLToPath(new URL('extension.mjs', directory)),
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -30,4 +31,4 @@ await writeFile(
     2,
   ) + '\n',
 );
-console.log(`Copilot Canvas package: ${directory.pathname}`);
+console.log(`Copilot Canvas package: ${fileURLToPath(directory)}`);
