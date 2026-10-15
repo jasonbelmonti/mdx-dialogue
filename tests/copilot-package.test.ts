@@ -25,14 +25,17 @@ test('relocated Canvas package joins a host session and runs the graph loop with
         assert.equal(canvases.length, 1);
         const canvas = canvases[0];
         const ctx = { sessionId:'isolated-host', instanceId:'one', input:{} };
+        // Native Copilot restores panels during registration, before joinSession resolves.
+        const url = new URL(canvas.open(ctx).url);
+        const before = canvas.actions[0].handler(ctx);
+        assert.throws(() => canvas.open({...ctx, sessionId:'another-host'}), /Wrong Copilot session/);
         const reply = {title:'Bundled loop',summary:'Saved',mdx:'<FlowGraph id="view" data="graph" interaction="discuss" />',graphs:[{id:'graph',title:'Graph',nodes:[{id:'one',label:'One',description:'Accepted reply',kind:'concept'}],edges:[]}]};
         setImmediate(async () => {
           try {
             assert.equal(canvas.id, 'mdx-dialogue');
-            const url = new URL(await canvas.open(ctx).url);
+            assert.equal(canvas.open(ctx).url, url.href);
             const page = await fetch(url.origin);
             assert.match(await page.text(), /<html/);
-            const before = canvas.actions[0].handler(ctx);
             const input = {documentId:before.id,revision:1,submissionId:randomUUID(),annotation:'Build this graph',target:null};
             const result = await fetch(url.origin+'/annotation', {method:'POST',headers:{Authorization:'Bearer '+url.hash.slice(1),'Content-Type':'application/json'},body:JSON.stringify(input)});
             assert.equal(result.status,200);
@@ -62,7 +65,11 @@ test('relocated Canvas package joins a host session and runs the graph loop with
       cwd: directory,
       encoding: 'utf8',
       timeout: 15000,
-      env: { ...process.env, MDX_DIALOGUE_DATA_DIR: join(directory, 'data') },
+      env: {
+        ...process.env,
+        SESSION_ID: 'isolated-host',
+        MDX_DIALOGUE_DATA_DIR: join(directory, 'data'),
+      },
     });
     assert.equal(run.status, 0, `${run.error ?? ''}\n${run.stderr}`);
     assert.match(run.stdout, /PACKAGED_LOOP_PASS/);
