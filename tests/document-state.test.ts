@@ -20,6 +20,12 @@ const select = (doc: Doc, epoch: string, sequence: number) => ({
   [documentSelectionKey]: { documentId: doc.id, epoch, sequence },
 });
 
+const hostFor = (
+  state: DocumentState<Doc>,
+  load: (id: string) => Promise<Doc>,
+  epoch = randomUUID(),
+) => new HostDocuments(state, async (id) => ({ document: await load(id), epoch }));
+
 test('late polls and host pushes cannot reopen a previous document, including replayed open results', async () => {
   const state = new DocumentState<Doc>();
   const first = a(),
@@ -29,7 +35,7 @@ test('late polls and host pushes cannot reopen a previous document, including re
     [first.id, first],
     [second.id, second],
   ]);
-  const host = new HostDocuments(state, async (id) => stored.get(id)!);
+  const host = hostFor(state, async (id) => stored.get(id)!, epoch);
   await host.receive(first, select(first, epoch, 1));
   const oldRead = state.request(first.id);
   await host.receive(second, select(second, epoch, 2));
@@ -47,7 +53,7 @@ test('same-revision stale host payloads cannot erase an accepted pending submiss
   const state = new DocumentState<Doc>();
   const initial = a();
   let saved = initial;
-  const host = new HostDocuments(state, async () => saved);
+  const host = hostFor(state, async () => saved);
   await host.receive(initial);
   saved = { ...initial, submissions: ['accepted-pending-request'] };
   await host.save(initial.id, async () => saved);
@@ -64,7 +70,7 @@ test('notification reads wait for in-flight saves and cannot invalidate the save
   const initial = a();
   let saved = initial;
   let reads = 0;
-  const host = new HostDocuments(state, async () => {
+  const host = hostFor(state, async () => {
     reads++;
     return saved;
   });
@@ -84,7 +90,7 @@ test('notification reads wait for in-flight saves and cannot invalidate the save
 test('failed saves release notification reads; older revisions and superseded reads cannot publish', async () => {
   const state = new DocumentState<Doc>();
   const doc = { ...a(), revision: 2 };
-  const host = new HostDocuments(state, async () => doc);
+  const host = hostFor(state, async () => doc);
   await host.receive(doc);
   const operation = deferred<Doc>();
   const save = host.save(doc.id, () => operation.promise);
@@ -106,7 +112,7 @@ test('a delayed old selection cannot invalidate a newer selection load', async (
     second = a(),
     epoch = randomUUID();
   const pending = deferred<Doc>();
-  const host = new HostDocuments(state, async (id) => (id === first.id ? first : pending.promise));
+  const host = hostFor(state, async (id) => (id === first.id ? first : pending.promise), epoch);
   await host.receive(first, select(first, epoch, 1));
   const openSecond = host.receive(second, select(second, epoch, 2));
   await host.receive(first, select(first, epoch, 1));
@@ -119,7 +125,7 @@ test('a refresh started immediately before a save cannot invalidate the accepted
   const state = new DocumentState<Doc>();
   const initial = a();
   let saved = initial;
-  const host = new HostDocuments(state, async () => saved);
+  const host = hostFor(state, async () => saved);
   await host.receive(initial);
   const read = host.refresh(initial.id);
   const write = host.save(initial.id, async () => {
@@ -136,13 +142,88 @@ test('replaying the current selection retries a failed read without selecting an
   const doc = a(),
     epoch = randomUUID();
   let unavailable = true;
-  const host = new HostDocuments(state, async () => {
-    if (unavailable) throw new Error('Transport unavailable');
-    return doc;
-  });
+  const host = hostFor(
+    state,
+    async () => {
+      if (unavailable) throw new Error('Transport unavailable');
+      return doc;
+    },
+    epoch,
+  );
   const intent = select(doc, epoch, 1);
   await assert.rejects(host.receive(doc, intent), /Transport unavailable/);
   unavailable = false;
   await host.receive(doc, intent);
   assert.deepEqual(state.read(), doc);
+});
+
+test('an authoritative selection read delayed across a restart cannot replace a newer selection', async () => {
+  const state = new DocumentState<Doc>();
+  const first = a(),
+    second = a();
+  const oldEpoch = randomUUID(),
+    currentEpoch = randomUUID();
+  const delayed = deferred<{ document: Doc; epoch: string }>();
+  let oldRead = true;
+  const host = new HostDocuments(state, async (id) => {
+    if (id === first.id && oldRead) {
+      oldRead = false;
+      return delayed.promise;
+    }
+    return { document: id === first.id ? first : second, epoch: currentEpoch };
+  });
+  const oldOpen = host.receive(first, select(first, oldEpoch, 1));
+  await host.receive(second, select(second, currentEpoch, 1));
+  delayed.resolve({ document: first, epoch: oldEpoch });
+  await oldOpen;
+  assert.equal(state.read()!.id, second.id);
+});
+
+test('a newer opening is revalidated if an older selection completes while its read waits', async () => {
+  const state = new DocumentState<Doc>();
+  const first = a(),
+    second = a();
+  const oldEpoch = randomUUID(),
+    currentEpoch = randomUUID();
+  const delayed = deferred<{ document: Doc; epoch: string }>();
+  let firstRead = true;
+  const host = new HostDocuments(state, async (id) => {
+    if (id === second.id && firstRead) {
+      firstRead = false;
+      return delayed.promise;
+    }
+    return {
+      document: id === first.id ? first : second,
+      epoch: id === first.id ? oldEpoch : currentEpoch,
+    };
+  });
+  const newOpen = host.receive(second, select(second, currentEpoch, 1));
+  await host.receive(first, select(first, oldEpoch, 1));
+  delayed.resolve({ document: second, epoch: currentEpoch });
+  await newOpen;
+  assert.equal(state.read()!.id, second.id);
+});
+
+test('a selection validation read cannot erase a save accepted while it waited', async () => {
+  const state = new DocumentState<Doc>();
+  const initial = a(),
+    epoch = randomUUID();
+  let saved = initial;
+  const delayed = deferred<{ document: Doc; epoch: string }>();
+  let hold = false;
+  const host = new HostDocuments(state, async () => {
+    if (hold) {
+      hold = false;
+      return delayed.promise;
+    }
+    return { document: saved, epoch };
+  });
+  const intent = select(initial, epoch, 1);
+  await host.receive(initial, intent);
+  hold = true;
+  const opening = host.receive(initial, intent);
+  await host.save(initial.id, async () => (saved = { ...initial, submissions: ['pending'] }));
+  delayed.resolve({ document: initial, epoch });
+  await opening;
+  assert.equal(state.read()!.submissions.length, 1);
 });

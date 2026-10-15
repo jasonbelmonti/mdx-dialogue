@@ -1,4 +1,4 @@
-import { documentSelectionMeta } from '../document-selection.js';
+import { documentSelectionMeta, documentStoreMeta } from '../document-selection.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
@@ -10,18 +10,21 @@ import {
 } from '../../shared/graph/schema.js';
 import { graphVocabulary } from '../../shared/graph/vocabulary.js';
 import { GraphStore } from './store.js';
-const uri = 'ui://mdx-dialogue/graph-workspace-v6.html';
+const uri = 'ui://mdx-dialogue/graph-workspace-v7.html';
 const mutation = { readOnlyHint: false, destructiveHint: false, openWorldHint: false };
 const answer = (graphDialogue: GraphDialogue) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(graphDialogue) }],
   structuredContent: { graphDialogue },
 });
-const guarded = (fn: () => GraphDialogue, selectionOwner?: object) => {
+const guarded = (
+  fn: () => GraphDialogue,
+  metadata?: (doc: GraphDialogue) => Record<string, unknown>,
+) => {
   try {
     const doc = fn();
     return {
       ...answer(doc),
-      ...(selectionOwner ? { _meta: documentSelectionMeta(selectionOwner, doc.id) } : {}),
+      ...(metadata ? { _meta: metadata(doc) } : {}),
     };
   } catch (error) {
     return {
@@ -41,6 +44,7 @@ export function registerGraphTools(server: McpServer, store: GraphStore) {
     'ui://mdx-dialogue/graph-workspace-v3.html',
     'ui://mdx-dialogue/graph-workspace-v4.html',
     'ui://mdx-dialogue/graph-workspace-v5.html',
+    'ui://mdx-dialogue/graph-workspace-v6.html',
   ])
     server.registerResource(
       resourceUri === uri ? 'graph-document' : `graph-document-${resourceUri.split('/').at(-1)}`,
@@ -73,10 +77,13 @@ export function registerGraphTools(server: McpServer, store: GraphStore) {
       _meta: { ui: { resourceUri: uri }, 'openai/ui': { entrypoints: [{ type: 'thread' }] } },
     },
     async ({ document, documentId }) =>
-      guarded(() => {
-        if (document && documentId) throw new Error('Pass document or documentId, not both.');
-        return documentId ? store.read(documentId) : store.create(document);
-      }, store),
+      guarded(
+        () => {
+          if (document && documentId) throw new Error('Pass document or documentId, not both.');
+          return documentId ? store.read(documentId) : store.create(document);
+        },
+        (doc) => documentSelectionMeta(store, doc.id),
+      ),
   );
   server.registerTool(
     'get_graph_dialogue',
@@ -87,7 +94,11 @@ export function registerGraphTools(server: McpServer, store: GraphStore) {
       annotations: { ...mutation, readOnlyHint: true },
       _meta: { ui: { visibility: ['app', 'model'] } },
     },
-    async ({ documentId }) => guarded(() => store.read(documentId)),
+    async ({ documentId }) =>
+      guarded(
+        () => store.read(documentId),
+        () => documentStoreMeta(store),
+      ),
   );
   server.registerTool(
     'submit_graph_annotation',

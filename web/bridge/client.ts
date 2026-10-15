@@ -2,6 +2,10 @@ import { HostDocuments } from './host-documents.js';
 import { DocumentState } from './document-state.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { snapshotSchema, type Dialogue, type Selection } from '../../shared/dialogue.js';
+import {
+  documentStoreEpochKey,
+  documentStoreEpochSchema,
+} from '../../shared/document-selection.js';
 
 export const app = new App({ name: 'MDX Dialogue', version: '0.1.0' }, {}, { autoResize: true });
 const state = new DocumentState<Dialogue>();
@@ -33,7 +37,11 @@ function parseResult(result: {
 }
 const documents = new HostDocuments(state, async (documentId) => {
   await ready;
-  return parseResult(await app.callServerTool({ name: 'get_dialogue', arguments: { documentId } }));
+  const result = await app.callServerTool({ name: 'get_dialogue', arguments: { documentId } });
+  return {
+    document: parseResult(result),
+    epoch: documentStoreEpochSchema.parse(result._meta?.[documentStoreEpochKey]),
+  };
 });
 app.ontoolresult = (result) => {
   try {

@@ -1,4 +1,4 @@
-import { documentSelectionMeta } from './document-selection.js';
+import { documentSelectionMeta, documentStoreMeta } from './document-selection.js';
 import { GraphStore } from './graph/store.js';
 import { registerGraphTools } from './graph/mcp.js';
 import { readFile } from 'node:fs/promises';
@@ -12,7 +12,7 @@ import {
 } from '../shared/dialogue.js';
 import { DialogueStore } from './dialogue-store.js';
 
-export const widgetUri = 'ui://mdx-dialogue/comparison-v3.html';
+export const widgetUri = 'ui://mdx-dialogue/comparison-v4.html';
 export function createMcpServer(store: DialogueStore, graphs = new GraphStore()) {
   const server = new McpServer(
     { name: 'mdx-dialogue', version: '0.1.0' },
@@ -53,6 +53,7 @@ export function createMcpServer(store: DialogueStore, graphs = new GraphStore())
   };
   for (const resourceUri of [
     widgetUri,
+    'ui://mdx-dialogue/comparison-v3.html',
     'ui://mdx-dialogue/comparison-v2.html',
     'ui://mdx-dialogue/comparison.html',
   ])
@@ -100,7 +101,8 @@ export function createMcpServer(store: DialogueStore, graphs = new GraphStore())
       annotations: readOnly,
       _meta: { ui: { visibility: ['app', 'model'] } },
     },
-    async ({ documentId }) => guarded(() => answer(store.read(documentId))),
+    async ({ documentId }) =>
+      guarded(() => ({ ...answer(store.read(documentId)), _meta: documentStoreMeta(store) })),
   );
   server.registerTool(
     'submit_selection',
