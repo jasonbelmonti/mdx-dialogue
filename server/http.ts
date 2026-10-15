@@ -1,9 +1,9 @@
+import { packagePath } from './package-paths.js';
 import { settleResponse } from './response-job.js';
 import { GraphStore } from './graph/store.js';
 import { registerGraphRoutes } from './graph/http.js';
 import express from 'express';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { z } from 'zod';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { DialogueStore } from './dialogue-store.js';
@@ -93,20 +93,22 @@ export function createHttpApp(
       'Content-Security-Policy',
       "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'",
     );
-    res.type('html').send(await readFile('dist/widget/widget.html', 'utf8'));
+    res.type('html').send(await readFile(packagePath('dist/widget/widget.html'), 'utf8'));
   });
   app.get('/graph-widget.html', async (_req, res) => {
     res.setHeader(
       'Content-Security-Policy',
       "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'",
     );
-    res.type('html').send(await readFile('dist/graph-widget/graph-widget.html', 'utf8'));
+    res
+      .type('html')
+      .send(await readFile(packagePath('dist/graph-widget/graph-widget.html'), 'utf8'));
   });
   app.get('/graphs', (_req, res) => {
-    res.sendFile('index.html', { root: resolve('dist/host') });
+    res.sendFile('index.html', { root: packagePath('dist/host') });
   });
-  app.use('/docs', express.static(resolve('site/build'), { extensions: ['html'] }));
-  app.use(express.static(resolve('dist/host')));
+  app.use('/docs', express.static(packagePath('site/build'), { extensions: ['html'] }));
+  app.use(express.static(packagePath('dist/host')));
   app.use(
     (error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       res.status(400).json({ error: error.message });

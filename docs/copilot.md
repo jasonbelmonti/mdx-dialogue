@@ -2,6 +2,8 @@
 
 The Copilot version is a **Canvas extension**: a persistent visual document beside your conversation. It uses the same compact graph panel, restricted MDX and React Flow renderer as the Codex version. Your annotation goes to the current Copilot session; Copilot updates the document through Canvas actions.
 
+For the npm beta, follow [the package installation guide](install.md). The instructions below retain the source-checkout workflow.
+
 ## Install from this checkout
 
 Requires Node 22.20+ to build and a Copilot desktop version that supports Canvas extensions.
@@ -12,7 +14,7 @@ npm run copilot:build
 npm run copilot:install -- --user
 ```
 
-The installer copies three self-contained files into `~/.copilot/extensions/mdx-dialogue/`. Copilot supplies `@github/copilot-sdk` when it launches the extension; do not install a second SDK there. The package needs no repository `node_modules`, Codex CLI, fixed port, API key, or running MCP service.
+The installer copies the self-contained entry point, Canvas HTML, package manifest and dependency notices into `~/.copilot/extensions/mdx-dialogue/`. Copilot supplies `@github/copilot-sdk` when it launches the extension; do not install a second SDK there. The package needs no repository `node_modules`, Codex CLI, fixed port, API key, or running MCP service.
 
 For one project's scope instead:
 
@@ -43,7 +45,7 @@ Each Copilot session/Canvas instance has a separate snapshot under `~/.mdx-dialo
 
 The extension starts an ephemeral HTTP listener on `127.0.0.1`. Its panel URL contains an instance-specific capability in the URL fragment; do not share that URL. Document requests require the capability and reject foreign Host/Origin headers. No remote scripts or generated JavaScript are executed. Snapshots use the same atomic single-writer storage as the Codex implementation; see the root README for lock recovery and durability limits.
 
-The core vocabulary is shared; saved documents are currently separate between Codex and Copilot. This adapter covers graph documents, not the earlier comparison-card experiment or the Docusaurus publication route. Public distribution and cross-host synchronization remain separate work.
+The core vocabulary is shared; saved documents are currently separate between Codex and Copilot. This adapter covers graph documents, not the earlier comparison-card experiment or the Docusaurus publication route. npm distribution packages this adapter; cross-host synchronization remains separate work.
 
 ## Compatibility and verification
 

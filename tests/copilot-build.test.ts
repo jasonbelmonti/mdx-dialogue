@@ -10,7 +10,15 @@ test('Canvas builds and installs from a checkout with URL-encoded path character
   const checkout = join(directory, 'checkout with spaces # café %');
   try {
     mkdirSync(checkout);
-    for (const path of ['copilot', 'server', 'shared', 'scripts', 'dist/copilot-ui'])
+    for (const path of [
+      'copilot',
+      'server',
+      'shared',
+      'scripts',
+      'cli',
+      'package.json',
+      'dist/copilot-ui',
+    ])
       cpSync(resolve(path), join(checkout, path), { recursive: true });
     symlinkSync(resolve('node_modules'), join(checkout, 'node_modules'), 'dir');
     const build = spawnSync(process.execPath, ['scripts/build-copilot.mjs'], {

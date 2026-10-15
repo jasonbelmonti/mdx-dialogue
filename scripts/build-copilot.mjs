@@ -1,10 +1,11 @@
 import { build } from 'esbuild';
-import { copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const directory = new URL('../dist/copilot/mdx-dialogue/', import.meta.url);
 await mkdir(directory, { recursive: true });
 await build({
+  absWorkingDir: fileURLToPath(new URL('../', import.meta.url)),
   entryPoints: ['copilot/extension.mjs'],
   outfile: fileURLToPath(new URL('extension.mjs', directory)),
   bundle: true,
@@ -22,7 +23,8 @@ await writeFile(
   JSON.stringify(
     {
       name: 'mdx-dialogue-canvas',
-      version: '0.1.0',
+      version: JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+        .version,
       private: true,
       type: 'module',
       description: 'Interactive MDX and React Flow documents for GitHub Copilot Canvas.',
@@ -32,3 +34,5 @@ await writeFile(
   ) + '\n',
 );
 console.log(`Copilot Canvas package: ${fileURLToPath(directory)}`);
+
+await import('./build-notices.mjs');

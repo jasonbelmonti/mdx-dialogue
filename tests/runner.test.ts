@@ -10,8 +10,13 @@ test('runner rejects stdout overflow even when the child handles termination wit
   const dir = await mkdtemp(join(tmpdir(), 'mdx-runner-'));
   const cwd = process.cwd();
   const bin = process.env.CODEX_BIN;
+  const originalData = process.env.MDX_DIALOGUE_DATA_DIR;
+  const data = join(dir, 'durable-data');
+  process.env.MDX_DIALOGUE_DATA_DIR = data;
   t.after(async () => {
     process.chdir(cwd);
+    if (originalData === undefined) delete process.env.MDX_DIALOGUE_DATA_DIR;
+    else process.env.MDX_DIALOGUE_DATA_DIR = originalData;
     if (bin === undefined) delete process.env.CODEX_BIN;
     else process.env.CODEX_BIN = bin;
     await rm(dir, { recursive: true, force: true });
@@ -34,8 +39,9 @@ test('runner rejects stdout overflow even when the child handles termination wit
     ),
     /output.*limit/i,
   );
-  const [attempt] = await readdir(join(dir, '.data/runs', id));
-  const attemptDir = join(dir, '.data/runs', id, attempt);
+  const [attempt] = await readdir(join(data, 'runs', id));
+  const attemptDir = join(data, 'runs', id, attempt);
+  await assert.rejects(stat(join(dir, '.data')), { code: 'ENOENT' });
   assert.ok((await stat(join(attemptDir, 'events.jsonl'))).size <= 2_000_000);
   assert.equal((await stat(join(attemptDir, 'request.json'))).mode & 0o777, 0o600);
   assert.ok((await readFile(join(attemptDir, 'request.json'), 'utf8')).includes('Test'));

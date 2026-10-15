@@ -2,7 +2,8 @@ import { discardOversizedResponse, readModelResponse } from './model-response.js
 import { runCodexChild } from './codex-child.js';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
+import { dataDirectory } from './data-directory.js';
 
 type RecordInput = {
   documentId: string;
@@ -15,7 +16,7 @@ export async function runStructuredCodex<T>(
   record: RecordInput,
   validate: (raw: unknown) => T,
 ): Promise<T> {
-  const runDir = resolve('.data/runs', record.submission.submissionId, randomUUID());
+  const runDir = join(dataDirectory(), 'runs', record.submission.submissionId, randomUUID());
   await mkdir(runDir, { recursive: true, mode: 0o700 });
   const schemaFile = join(runDir, 'response-schema.json');
   const outputFile = join(runDir, 'response.json');

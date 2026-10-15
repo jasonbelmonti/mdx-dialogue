@@ -1,3 +1,4 @@
+import { packagePath, packageVersion } from './package-paths.js';
 import { documentSelectionMeta, documentStoreMeta } from './document-selection.js';
 import { GraphStore } from './graph/store.js';
 import { registerGraphTools } from './graph/mcp.js';
@@ -15,7 +16,7 @@ import { DialogueStore } from './dialogue-store.js';
 export const widgetUri = 'ui://mdx-dialogue/comparison-v4.html';
 export function createMcpServer(store: DialogueStore, graphs = new GraphStore()) {
   const server = new McpServer(
-    { name: 'mdx-dialogue', version: '0.1.0' },
+    { name: 'mdx-dialogue', version: packageVersion },
     {
       instructions:
         'Use prose when sufficient. When an interactive graph clarifies relationships, dependencies, processes or concepts, use open_graph_dialogue with a composed document. Read graph annotations with get_graph_dialogue and revise through respond_to_graph. Each tool documents its component vocabulary. The separate layout demonstration uses open_dialogue, get_dialogue and respond_to_selection. Read the exact saved submission before responding. Never claim a revision is accepted until its response tool succeeds.',
@@ -66,7 +67,7 @@ export function createMcpServer(store: DialogueStore, graphs = new GraphStore())
           {
             uri: resourceUri,
             mimeType: 'text/html;profile=mcp-app',
-            text: await readFile('dist/widget/widget.html', 'utf8'),
+            text: await readFile(packagePath('dist/widget/widget.html'), 'utf8'),
             _meta: {
               ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false },
             },
