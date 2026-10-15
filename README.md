@@ -2,7 +2,9 @@
 
 A local proof of a model composing an interactive explanation, receiving an annotation about a selected graph node, and revising the same document. React Flow draws the graph; Docusaurus displays the same accepted MDX and graph data through the shared renderer.
 
-The MCP Apps `App` and `AppBridge` SDKs carry tool calls, structured model context and follow-up messages. The local host invokes the authenticated Codex CLI. Graph content and replies come from actual model calls.
+Codex uses MCP Apps; GitHub Copilot desktop uses a native Canvas extension. Both graph workspaces share the restricted MDX renderer, React Flow components and saved-document rules. The standalone browser demo invokes the authenticated Codex CLI.
+
+For Copilot desktop, see [installing and using the Canvas](docs/copilot.md). It has its own self-contained build and uses the current Copilot session, with no Codex CLI or separately started MCP service.
 
 ## Run
 
@@ -112,12 +114,15 @@ Ownership:
 - `shared/graph/`: semantic schemas, graph/MDX validation and model vocabulary.
 - `shared/mdx-syntax.ts`: shared restricted syntax parser.
 - `server/graph/`: graph state transitions, persistence, MCP tools and HTTP dispatch.
+- `server/copilot/`: Canvas lifecycle/actions, session-scoped documents and authenticated loopback transport.
+- `copilot/extension.mjs`: host-supplied Copilot SDK entry point, bundled by `copilot:build`.
 - `server/codex-process.ts`: model request orchestration and attempt receipts.
 - `server/codex-child.ts`, `server/model-response.ts`: bounded child execution and reply decoding.
 - `server/snapshot-storage.ts`: atomic snapshot saves and cooperating-writer conflict detection.
 - `web/bridge/document-state.ts`: current-document selection and asynchronous response ordering.
 - `web/host.ts`: local MCP Apps harness.
 - `web/graph/`: studio, interaction state, bridge and shared graph renderer.
+- `web/copilot/`: Canvas transport and entry point using the shared graph panel.
 - `site/`: Docusaurus MDX pages and browser-only saved-document view.
 - Existing `web/components/`, `server/dialogue-store.ts` and layout tools retain the original proof.
 

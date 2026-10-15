@@ -1,15 +1,19 @@
-import { useSyncExternalStore } from 'react';
-import { snapshot, subscribe } from './bridge.js';
+import { useSyncExternalStore, type ReactNode } from 'react';
+import type { GraphTransport } from './transport.js';
 import { GraphDocument } from './GraphDocument.js';
 import { useGraphDialogue } from './useGraphDialogue.js';
-import { WorkspaceControl } from './WorkspaceControl.js';
 import './studio.css';
-export function GraphPanel() {
-  const doc = useSyncExternalStore(subscribe, snapshot);
-  return <GraphSession key={doc?.id ?? 'loading'} />;
+interface Props {
+  transport: GraphTransport;
+  hostName: string;
+  workspaceControl?: ReactNode;
 }
-function GraphSession() {
-  const state = useGraphDialogue();
+export function GraphPanel(props: Props) {
+  const doc = useSyncExternalStore(props.transport.subscribe, props.transport.snapshot);
+  return <GraphSession key={doc?.id ?? 'loading'} {...props} />;
+}
+function GraphSession({ transport, hostName, workspaceControl }: Props) {
+  const state = useGraphDialogue(transport);
   const { doc, selected, annotation, busy, waiting, error } = state;
   if (!doc)
     return (
@@ -25,7 +29,7 @@ function GraphSession() {
     <main className="graph-studio">
       <header className="studio-heading">
         <h1>{content?.title ?? 'New visual document'}</h1>
-        <WorkspaceControl />
+        {workspaceControl}
         <span className="revision">Revision {doc.revision}</span>
       </header>
       <div className={content ? 'studio-layout' : 'studio-layout empty'}>
@@ -129,9 +133,14 @@ function GraphSession() {
               {error}
             </p>
           )}
+          {state.startupError && (
+            <p role="alert" className="graph-error">
+              {state.startupError}
+            </p>
+          )}
           {waiting && (
             <p role="status" className="graph-status">
-              Sent to Codex. You can keep exploring while it responds.
+              Sent to {hostName}. You can keep exploring while it responds.
             </p>
           )}
         </aside>

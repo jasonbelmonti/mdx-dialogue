@@ -1,7 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { snapshot, subscribe, connectionError, deliver, refresh } from './bridge.js';
+import type { GraphTransport } from './transport.js';
 import type { GraphInput, GraphTarget } from '../../shared/graph/schema.js';
-export function useGraphDialogue() {
+export function useGraphDialogue(transport: GraphTransport) {
+  const { snapshot, subscribe, connectionError, deliver, refresh } = transport;
   const doc = useSyncExternalStore(subscribe, snapshot);
   const startupError = useSyncExternalStore(subscribe, connectionError);
   const [annotation, setAnnotation] = useState('');
