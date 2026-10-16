@@ -8,9 +8,9 @@ For Copilot desktop, see [installing and using the Canvas](docs/copilot.md). It 
 
 ## Install the beta
 
-The release target is `@jasonbelmonti/mdx-dialogue@0.1.0-beta.1` on npm's `next` tag. Registry commands become available after publication. See [installation, data migration and upgrades](docs/install.md) for Codex and Copilot, and [the release procedure](docs/releasing.md) for maintainers. The package contains prebuilt UI and a compiled runtime; no developer checkout is needed.
+The beta release is `@jasonbelmonti/mdx-dialogue@0.1.0-beta.2` on npm's `next` tag. See [installation, data migration and upgrades](docs/install.md) for Codex and Copilot, and [the release procedure](docs/releasing.md) for maintainers. The package contains prebuilt UI and a compiled runtime; no developer checkout is needed.
 
-The current preparation work does not itself publish the package. Copilot Canvas remains experimental, and controlled package tests are distinct from native host acceptance.
+Copilot Canvas remains experimental, and controlled package tests are distinct from native host acceptance.
 
 ## Run from source
 
