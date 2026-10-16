@@ -1,3 +1,4 @@
+import { packagePath } from '../package-paths.js';
 import { documentSelectionMeta, documentStoreMeta } from '../document-selection.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { readFile } from 'node:fs/promises';
@@ -55,7 +56,7 @@ export function registerGraphTools(server: McpServer, store: GraphStore) {
           {
             uri: resourceUri,
             mimeType: 'text/html;profile=mcp-app',
-            text: await readFile('dist/graph-widget/graph-widget.html', 'utf8'),
+            text: await readFile(packagePath('dist/graph-widget/graph-widget.html'), 'utf8'),
             _meta: {
               ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false },
               'openai/ui': { availableDisplayModes: ['fullscreen'] },

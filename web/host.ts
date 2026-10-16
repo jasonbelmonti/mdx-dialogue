@@ -84,7 +84,13 @@ async function start() {
       if (graphMode) {
         const link = document.querySelector<HTMLAnchorElement>('#docs-link')!;
         link.href = `/docs/graph?document=${doc.id}`;
-        link.hidden = false;
+        void fetch('/docs/graph', { method: 'HEAD' })
+          .then((response) => {
+            link.hidden = !response.ok;
+          })
+          .catch(() => {
+            link.hidden = true;
+          });
       }
     }
     await bridge.sendToolResult(result);

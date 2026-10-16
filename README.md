@@ -1,14 +1,20 @@
 # MDX Dialogue
 
-A local proof of a model composing an interactive explanation, receiving an annotation about a selected graph node, and revising the same document. React Flow draws the graph; Docusaurus displays the same accepted MDX and graph data through the shared renderer.
+An experimental visual workspace for a model composing an interactive explanation, receiving an annotation about a selected graph node, and revising the same document. React Flow draws the graph; Docusaurus displays the same accepted MDX and graph data through the shared renderer.
 
 Codex uses MCP Apps; GitHub Copilot desktop uses a native Canvas extension. Both graph workspaces share the restricted MDX renderer, React Flow components and saved-document rules. The standalone browser demo invokes the authenticated Codex CLI.
 
 For Copilot desktop, see [installing and using the Canvas](docs/copilot.md). It has its own self-contained build and uses the current Copilot session, with no Codex CLI or separately started MCP service.
 
-## Run
+## Install the beta
 
-Requires Node 22.20+ and an authenticated `codex` executable on PATH.
+The release target is `@jasonbelmonti/mdx-dialogue@0.1.0-beta.1` on npm's `next` tag. Registry commands become available after publication. See [installation, data migration and upgrades](docs/install.md) for Codex and Copilot, and [the release procedure](docs/releasing.md) for maintainers. The package contains prebuilt UI and a compiled runtime; no developer checkout is needed.
+
+The current preparation work does not itself publish the package. Copilot Canvas remains experimental, and controlled package tests are distinct from native host acceptance.
+
+## Run from source
+
+Requires Node 22.20+. The standalone browser demo also requires an authenticated `codex` executable on PATH; native Codex/Copilot host replies use their current session.
 
 ```sh
 npm ci
@@ -25,7 +31,7 @@ The original layout proof remains at **http://127.0.0.1:4317/**. Bookmark a docu
 
 `CODEX_BIN` selects the CLI executable. `PORT` changes the loopback port. The CLI uses the account's authentication with user configuration omitted, read-only sandboxing, shell/apps/multi-agent/web search disabled, and schema-constrained output. Each submission uses the signed-in account's model allowance.
 
-State is saved in `.data/graphs.json` and `.data/dialogues.json`. Each attempt retains request, events, stderr and response receipt under `.data/runs/`. These are ignored by Git. Failures retain the exact annotation, target and submission ID; **Retry saved request** retries that request. Interrupted runs become retryable on server restart.
+With the source entry point, state is saved in `.data/graphs.json` and `.data/dialogues.json`. Each attempt retains request, events, stderr and response receipt under `.data/runs/`. These are ignored by Git. `MDX_DIALOGUE_DATA_DIR` overrides the directory. The installed CLI instead defaults to `~/.mdx-dialogue/codex/`. Failures retain the exact annotation, target and submission ID; **Retry saved request** retries that request. Interrupted runs become retryable on server restart.
 
 Both snapshot files use save-before-publish state transitions and atomic replacement. Cooperating writers use an exclusive lock and compare the last loaded bytes before saving; a stale server must restart to reload the winning state. This is single-writer storage, not concurrent editing. If a process crashes during a save, its `.lock` file may remain. Stop all processes using that snapshot, retain a copy of the JSON and leftover temporary files, then remove only that snapshot's stale lock before restarting. Locks are never removed automatically by age. Atomic rename is not a power-loss durability guarantee.
 
@@ -70,7 +76,7 @@ npm run mcp:stdio
 
 `scripts/start-mcp.sh` starts the stdio server from any working directory. A compatible native host can use the tools directly, with its model calling `respond_to_graph`; it does not use the local CLI runner. The stdio server keeps state for its process lifetime; HTTP mode persists local state.
 
-`plugin/` is a local development package. The repository marketplace at `.agents/plugins/marketplace.json` exposes it as `mdx-dialogue@mdx-dialogue-local`. It connects to `http://127.0.0.1:4319/mcp`, keeping the native test separate from the original demo on port 4317.
+`plugin/` supplies the Codex plugin manifest for local development and tagged GitHub distribution. The repository marketplace at `.agents/plugins/marketplace.json` exposes it as `mdx-dialogue@mdx-dialogue-local`. It connects to `http://127.0.0.1:4319/mcp`, keeping the native test separate from the original demo on port 4317.
 
 ### Native Codex test
 
@@ -96,7 +102,7 @@ Widget resources use versioned URIs because native hosts can cache them. After a
 
 Verify the actual native panel and incoming message in the same chat, then inspect **View the round trip**: the document ID must stay unchanged, revision must advance, the selected node and submission must match, and the completed submission must report `source: host-model`. A successful install, protocol test, or the standalone `/graphs` browser harness does not establish native host support. Native rendering and same-chat delivery remain unverified until this observation succeeds. If the service stopped during the desktop refresh, restart it using the command above.
 
-The local host binds to loopback and rejects foreign hosts/origins. Public hosting, authentication and distribution are outside this prototype.
+The local host binds to loopback and rejects foreign hosts/origins. Public hosting and multi-user authentication remain outside this beta. npm distribution covers the local runtime; the plugin marketplace remains GitHub-hosted.
 
 ## Development
 
@@ -114,6 +120,8 @@ Ownership:
 - `shared/graph/`: semantic schemas, graph/MDX validation and model vocabulary.
 - `shared/mdx-syntax.ts`: shared restricted syntax parser.
 - `server/graph/`: graph state transitions, persistence, MCP tools and HTTP dispatch.
+- `bin/`, `cli/` and `scripts/build-*.mjs`: installed commands, preservation-safe installation and release bundles.
+- `server/package-paths.ts`, `server/data-directory.ts`: package-relative assets and explicit data locations.
 - `server/copilot/`: Canvas lifecycle/actions, session-scoped documents and authenticated loopback transport.
 - `copilot/extension.mjs`: host-supplied Copilot SDK entry point, bundled by `copilot:build`.
 - `server/codex-process.ts`: model request orchestration and attempt receipts.
@@ -129,3 +137,7 @@ Ownership:
 Limits: one active local model run per flow, 100 documents and 20 submissions per document, up to three graphs with 32 nodes each, a three-minute model timeout, and no multi-user authentication. Pan/zoom is needed for larger graphs. Editing edges, arbitrary component code, bundle optimization and additional vocabulary families are follow-up work.
 
 Docusaurus is a build dependency. Scoped dependency overrides update its worker pool and serialization package to patched releases; production builds verify compatibility. Other upstream build-tool audit findings are retained as a prototype limitation rather than applying incompatible forced downgrades.
+
+## License
+
+[MIT](LICENSE). Bundled third-party code retains its own license notices.

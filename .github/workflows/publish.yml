@@ -1,0 +1,52 @@
+name: Publish npm beta
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'jasonbelmonti/mdx-dialogue' && github.event.release.prerelease
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - name: Require released commit on main
+        run: git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@11.13.0
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: npm test
+      - run: npm run docs:build
+      - run: npm run release:check
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+      - name: Pack once
+        run: |
+          mkdir release
+          npm pack --ignore-scripts --pack-destination release
+          echo "MDX_RELEASE_TARBALL=$(find release -maxdepth 1 -name '*.tgz' -print)" >> "$GITHUB_ENV"
+      - name: Test exact release tarball
+        run: npm run test:package
+      - name: Retain tested tarball
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: npm-beta
+          path: release/*.tgz
+          if-no-files-found: error
+      - name: Publish tested tarball with OIDC
+        run: npm publish release/*.tgz --access public --tag next --ignore-scripts

@@ -1,11 +1,10 @@
 {
-  "name": "mdx-dialogue",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@jasonbelmonti/mdx-dialogue",
+  "version": "0.1.0-beta.1",
   "type": "module",
   "scripts": {
     "dev": "npm run build && tsx watch server/main.ts",
-    "build": "vite build && vite build --config vite.widget.config.ts && vite build --config vite.graph.config.ts && npm run copilot:build",
+    "build": "vite build && vite build --config vite.widget.config.ts && vite build --config vite.graph.config.ts && npm run copilot:build && npm run build:runtime",
     "start": "tsx server/main.ts",
     "check": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
@@ -14,17 +13,16 @@
     "docs:build": "docusaurus build site",
     "docs:dev": "docusaurus start site --host 127.0.0.1 --port 4318",
     "copilot:build": "vite build --config vite.copilot.config.ts && node scripts/build-copilot.mjs",
-    "copilot:install": "node scripts/install-copilot.mjs"
+    "copilot:install": "node scripts/install-copilot.mjs",
+    "build:runtime": "node scripts/build-runtime.mjs",
+    "prepack": "npm run build",
+    "test:package": "node --test tests/package/*.test.mjs",
+    "release:check": "node scripts/check-release.mjs",
+    "prepublishOnly": "npm run release:check"
   },
   "dependencies": {
-    "@dagrejs/dagre": "3.1.1",
-    "@mdx-js/react": "3.1.1",
-    "@modelcontextprotocol/ext-apps": "2.0.3",
     "@modelcontextprotocol/sdk": "1.32.0",
-    "@xyflow/react": "12.12.0",
     "express": "5.2.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
     "remark-mdx": "3.1.1",
     "remark-parse": "11.0.0",
     "unified": "11.0.5",
@@ -44,12 +42,60 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.2",
-    "vite-plugin-singlefile": "2.3.3"
+    "vite-plugin-singlefile": "2.3.3",
+    "@dagrejs/dagre": "3.1.1",
+    "@mdx-js/react": "3.1.1",
+    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "@xyflow/react": "12.12.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "overrides": {
     "@docusaurus/core": {
       "tinypool": "2.2.0"
     },
     "serialize-javascript": "7.1.2"
+  },
+  "description": "Interactive MDX and React Flow conversations for Codex MCP Apps and GitHub Copilot Canvas.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "bin": {
+    "mdx-dialogue": "bin/mdx-dialogue.mjs"
+  },
+  "files": [
+    "bin/mdx-dialogue.mjs",
+    "cli/install-copilot.mjs",
+    "dist/server.mjs",
+    "dist/stdio.mjs",
+    "dist/host/index.html",
+    "dist/host/assets/",
+    "dist/widget/widget.html",
+    "dist/graph-widget/graph-widget.html",
+    "dist/copilot/mdx-dialogue/package.json",
+    "dist/copilot/mdx-dialogue/extension.mjs",
+    "dist/copilot/mdx-dialogue/canvas.html",
+    "dist/copilot/mdx-dialogue/THIRD_PARTY_NOTICES.txt",
+    "dist/THIRD_PARTY_NOTICES.txt",
+    "plugin/plugin.json",
+    "plugin/mcp.json",
+    "docs/install.md",
+    "docs/copilot.md",
+    "docs/releasing.md",
+    "dist/copilot/mdx-dialogue/LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jasonbelmonti/mdx-dialogue.git"
+  },
+  "homepage": "https://github.com/jasonbelmonti/mdx-dialogue#readme",
+  "bugs": {
+    "url": "https://github.com/jasonbelmonti/mdx-dialogue/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next",
+    "registry": "https://registry.npmjs.org/"
   }
 }
