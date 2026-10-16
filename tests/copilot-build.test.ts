@@ -17,6 +17,7 @@ test('Canvas builds and installs from a checkout with URL-encoded path character
       'scripts',
       'cli',
       'package.json',
+      'LICENSE',
       'dist/copilot-ui',
     ])
       cpSync(resolve(path), join(checkout, path), { recursive: true });
@@ -34,7 +35,7 @@ test('Canvas builds and installs from a checkout with URL-encoded path character
       { cwd: checkout, encoding: 'utf8', timeout: 15000 },
     );
     assert.equal(install.status, 0, `${install.error ?? ''}\n${install.stderr}`);
-    for (const name of ['extension.mjs', 'canvas.html', 'package.json']) {
+    for (const name of ['extension.mjs', 'canvas.html', 'package.json', 'LICENSE']) {
       const built = readFileSync(join(checkout, 'dist/copilot/mdx-dialogue', name));
       assert.ok(built.length > 0);
       assert.deepEqual(readFileSync(join(project, '.github/extensions/mdx-dialogue', name)), built);

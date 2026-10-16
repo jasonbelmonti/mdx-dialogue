@@ -57,7 +57,7 @@
     "serialize-javascript": "7.1.2"
   },
   "description": "Interactive MDX and React Flow conversations for Codex MCP Apps and GitHub Copilot Canvas.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "engines": {
     "node": ">=22.20.0"
   },
@@ -82,7 +82,8 @@
     "plugin/mcp.json",
     "docs/install.md",
     "docs/copilot.md",
-    "docs/releasing.md"
+    "docs/releasing.md",
+    "dist/copilot/mdx-dialogue/LICENSE"
   ],
   "repository": {
     "type": "git",

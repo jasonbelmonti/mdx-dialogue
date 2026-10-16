@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
+const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const directory = new URL('../dist/copilot/mdx-dialogue/', import.meta.url);
 await mkdir(directory, { recursive: true });
 await build({
@@ -18,13 +19,14 @@ await copyFile(
   new URL('../dist/copilot-ui/copilot-canvas.html', import.meta.url),
   new URL('canvas.html', directory),
 );
+await copyFile(new URL('../LICENSE', import.meta.url), new URL('LICENSE', directory));
 await writeFile(
   new URL('package.json', directory),
   JSON.stringify(
     {
       name: 'mdx-dialogue-canvas',
-      version: JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
-        .version,
+      version: manifest.version,
+      license: manifest.license,
       private: true,
       type: 'module',
       description: 'Interactive MDX and React Flow documents for GitHub Copilot Canvas.',

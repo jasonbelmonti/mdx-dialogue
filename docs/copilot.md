@@ -14,7 +14,7 @@ npm run copilot:build
 npm run copilot:install -- --user
 ```
 
-The installer copies the self-contained entry point, Canvas HTML, package manifest and dependency notices into `~/.copilot/extensions/mdx-dialogue/`. Copilot supplies `@github/copilot-sdk` when it launches the extension; do not install a second SDK there. The package needs no repository `node_modules`, Codex CLI, fixed port, API key, or running MCP service.
+The installer copies the self-contained entry point, Canvas HTML, package manifest, MIT license and dependency notices into `~/.copilot/extensions/mdx-dialogue/`. Copilot supplies `@github/copilot-sdk` when it launches the extension; do not install a second SDK there. The package needs no repository `node_modules`, Codex CLI, fixed port, API key, or running MCP service.
 
 For one project's scope instead:
 

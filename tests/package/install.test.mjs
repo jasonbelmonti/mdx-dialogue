@@ -65,7 +65,7 @@ test(
       for (const path of inventory)
         assert.match(
           path,
-          /^package\/(package.json|README.md|LICENSE|bin\/[^/]+\.mjs|cli\/[^/]+\.mjs|dist\/(server.mjs|stdio.mjs|THIRD_PARTY_NOTICES.txt|host\/.+|widget\/widget.html|graph-widget\/graph-widget.html|copilot\/mdx-dialogue\/(extension.mjs|canvas.html|package.json|THIRD_PARTY_NOTICES.txt))|plugin\/(plugin.json|mcp.json)|docs\/(install.md|copilot.md|releasing.md))$/,
+          /^package\/(package.json|README.md|LICENSE|bin\/[^/]+\.mjs|cli\/[^/]+\.mjs|dist\/(server.mjs|stdio.mjs|THIRD_PARTY_NOTICES.txt|host\/.+|widget\/widget.html|graph-widget\/graph-widget.html|copilot\/mdx-dialogue\/(extension.mjs|canvas.html|package.json|LICENSE|THIRD_PARTY_NOTICES.txt))|plugin\/(plugin.json|mcp.json)|docs\/(install.md|copilot.md|releasing.md))$/,
           path,
         );
       run(
@@ -85,6 +85,8 @@ test(
       const root = join(directory, 'node_modules/@jasonbelmonti/mdx-dialogue');
       const binary = join(directory, 'node_modules/.bin/mdx-dialogue');
       const beforeBytes = digestTree(root);
+      assert.equal(JSON.parse(readFileSync(join(root, 'package.json'))).license, 'MIT');
+      assert.deepEqual(readFileSync(join(root, 'LICENSE')), readFileSync('LICENSE'));
       assert.equal(existsSync(join(directory, 'node_modules/tsx')), false);
       assert.equal(existsSync(join(directory, 'node_modules/vite')), false);
       assert.equal(run(binary, ['--version'], { cwd: temporary, env }).trim(), manifest.version);
@@ -170,6 +172,11 @@ test(
       assert.equal(
         JSON.parse(readFileSync(join(extension, 'package.json'))).version,
         manifest.version,
+      );
+      assert.equal(JSON.parse(readFileSync(join(extension, 'package.json'))).license, 'MIT');
+      assert.deepEqual(
+        readFileSync(join(extension, 'LICENSE')),
+        readFileSync(join(root, 'LICENSE')),
       );
       writeFileSync(join(extension, 'user-note.txt'), 'retain this file');
       const saved = digestTree(extension);

@@ -4,7 +4,7 @@ One repository supplies the npm runtime and the tagged Codex marketplace. The re
 
 ## Before the first publication
 
-1. Confirm ownership of the npm user/org scope `@jasonbelmonti`, choose and include the repository's open-source license, and review the package inventory. `npm run release:check` fails without an approved license file.
+1. Confirm ownership of the npm user/org scope `@jasonbelmonti`, review the repository's MIT license and package inventory. `npm run release:check` fails without an approved license file.
 2. Merge the release-preparation PR. Run the same checks as CI: `npm ci`, `npm run check`, `npm run build`, `npm test`, `npm run docs:build`, `npm run release:check`, and `npm run test:package`.
 3. Bootstrap the npm package using the maintainer's authenticated account and 2FA. First publication requires explicit maintainer authorization. Pack once, test that tarball using `MDX_RELEASE_TARBALL=/absolute/package.tgz npm run test:package`, then publish **that same tarball** with `npm publish /absolute/package.tgz --access public --tag next --ignore-scripts`. No source checkout or `.context` directory belongs in the package.
 4. In npm's package settings, configure a GitHub trusted publisher: owner `jasonbelmonti`, repository `mdx-dialogue`, workflow filename `publish.yml`, environment `npm`. Enable direct `npm publish` for this publisher; stage-only permission is insufficient for this workflow. Configure the GitHub `npm` environment's release protections as appropriate before triggering a release.

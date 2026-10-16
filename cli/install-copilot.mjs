@@ -15,7 +15,13 @@ export async function installCopilot(scope) {
       : join(resolve(scope.slice('--project='.length)), '.github', 'extensions');
   const destination = join(parent, 'mdx-dialogue');
   const source = new URL('../dist/copilot/mdx-dialogue/', import.meta.url);
-  const files = ['package.json', 'extension.mjs', 'canvas.html', 'THIRD_PARTY_NOTICES.txt'];
+  const files = [
+    'package.json',
+    'extension.mjs',
+    'canvas.html',
+    'LICENSE',
+    'THIRD_PARTY_NOTICES.txt',
+  ];
   for (const name of files) await readFile(new URL(name, source));
   await mkdir(parent, { recursive: true });
   const stage = join(dirname(parent), `.mdx-dialogue-install-${randomUUID()}`);

@@ -30,7 +30,7 @@ If a service already uses port 4319, stop that service yourself before replacing
 npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.1 install copilot --user
 ```
 
-This copies the self-contained Canvas payload and dependency notices into `~/.copilot/extensions/mdx-dialogue/`. For one trusted project:
+This copies the self-contained Canvas payload, MIT license and dependency notices into `~/.copilot/extensions/mdx-dialogue/`. For one trusted project:
 
 ```sh
 npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.1 install copilot --project /absolute/project
