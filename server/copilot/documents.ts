@@ -8,6 +8,7 @@ import {
 } from '../../shared/graph/schema.js';
 import { GraphStore } from '../graph/store.js';
 import { snapshotStorage } from '../snapshot-storage.js';
+import { annotationMessage, type AnnotationMessage } from './annotation-message.js';
 
 export interface CanvasIdentity {
   sessionId: string;
@@ -15,7 +16,7 @@ export interface CanvasIdentity {
 }
 export interface CopilotSession {
   sessionId: string;
-  send(options: { prompt: string }): Promise<string>;
+  send(options: AnnotationMessage): Promise<string>;
 }
 type Instance = CanvasIdentity & {
   store: GraphStore;
@@ -127,17 +128,9 @@ export class CanvasDocuments {
     instance.store.begin(input.documentId, input.submissionId);
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      const delivery = this.session().send({
-        prompt:
-          `The user submitted an annotation in MDX Dialogue Canvas instance ${JSON.stringify(instance.instanceId)}. ` +
-          `Use invoke_canvas_action for canvas mdx-dialogue, instance ${JSON.stringify(instance.instanceId)}, ` +
-          `action get_document to read the saved document and selected-node annotation. ` +
-          `Reply using action respond_to_graph with submissionId ${input.submissionId} and a complete reply ` +
-          `(title, summary, mdx, graphs). Preserve the document's intent and apply the user's saved request. ` +
-          `Use only plain Markdown and literal <FlowGraph id="view" data="GRAPH_ID" interaction="discuss" /> components. ` +
-          `Graph nodes have id, label, description, kind (concept/process/decision/store); edges have id, source, target, label. ` +
-          `Do not invoke Codex or create a different Canvas instance.`,
-      });
+      const delivery = this.session().send(
+        annotationMessage(instance.instanceId, input, instance.store.read(input.documentId)),
+      );
       await Promise.race([
         delivery,
         new Promise<never>((_, reject) => {

@@ -37,6 +37,8 @@ If discovery has not refreshed, restart Copilot and open a new session. Installa
 3. Enter a question or change, then click **Discuss & revise**.
 4. Copilot reads the saved annotation with `get_document` and calls `respond_to_graph`. The same document advances its revision; the panel refreshes automatically.
 
+The composer stays below the document at all window widths. Chat displays your annotation and selected-node context; the SDK's `displayPrompt` keeps model routing instructions out of the visible message. When the saved response completes, the panel shows its updated revision and summary. Canvas discovery and input schemas describe the supported Markdown subset and exact `FlowGraph` attributes before authoring; blockquotes remain unsupported.
+
 **Activity** exposes the document ID, revision, submission ID, selected node and response status. A completed native response records `source: host-model`. **Retry saved request** retains the exact input and submission ID. A delivery retry may send another Copilot message, but only one valid reply can advance that submission's revision.
 
 ## Data and boundaries

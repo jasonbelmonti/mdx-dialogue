@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { graphReplySchema } from '../../shared/graph/schema.js';
+import { graphMdxContract } from '../../shared/graph/mdx-contract.js';
 import { CanvasDocuments, type CanvasIdentity, type CopilotSession } from './documents.js';
 import { startCanvasServer } from './http.js';
 
@@ -19,8 +20,7 @@ export async function createGraphCanvas(options: {
     canvas: {
       id: 'mdx-dialogue',
       displayName: 'MDX Dialogue',
-      description:
-        'Discuss systems, concepts and workflows visually with interactive graphs and a persistent annotation composer. Open with optional initial document, read annotations, then respond in this Canvas.',
+      description: `Discuss systems, concepts and workflows visually with interactive graphs and a persistent annotation composer. Open with optional initial document, read annotations, then respond in this Canvas. ${graphMdxContract}`,
       inputSchema: z.json().parse(z.toJSONSchema(openSchema)),
       open: (ctx: Request) => {
         const { initial } = openSchema.parse(ctx.input ?? {});
@@ -41,8 +41,7 @@ export async function createGraphCanvas(options: {
         },
         {
           name: 'respond_to_graph',
-          description:
-            'Accept a revised document for the latest saved submission. Use restricted Markdown with literal FlowGraph components; never executable MDX. A successful reply updates this same Canvas.',
+          description: `Accept a revised document for the latest saved submission. A successful reply updates this same Canvas. After success, briefly tell the user what changed. ${graphMdxContract}`,
           inputSchema: z.json().parse(z.toJSONSchema(responseSchema)),
           handler: (ctx: Request) => {
             const { submissionId, reply } = responseSchema.parse(ctx.input);

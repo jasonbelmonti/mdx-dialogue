@@ -207,33 +207,6 @@ summary {
   padding: 16px;
   color: var(--graph-muted);
 }
-@media (min-width: 1100px) {
-  .studio-layout {
-    grid-template-columns: minmax(0, 1fr) 280px;
-    grid-template-rows: minmax(0, 1fr);
-  }
-  .conversation-card {
-    max-height: none;
-    border-top: 0;
-    border-left: 1px solid var(--graph-border);
-  }
-  .target-control {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-  }
-  .conversation-card textarea {
-    min-height: 120px;
-  }
-  .selected-detail p {
-    max-height: 180px;
-  }
-  .graph-receipt pre {
-    left: auto;
-    width: 360px;
-    max-width: calc(100vw - 28px);
-  }
-}
 @media (max-width: 450px) {
   .studio-heading {
     padding: 8px 10px;

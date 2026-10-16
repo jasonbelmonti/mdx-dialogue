@@ -22,6 +22,7 @@ function GraphSession({ transport, hostName, workspaceControl }: Props) {
       </main>
     );
   const content = doc.content;
+  const latest = doc.submissions.at(-1);
   const selectedNode = content?.graphs
     .find((g) => g.id === selected?.graphId)
     ?.nodes.find((n) => n.id === selected?.nodeId);
@@ -141,6 +142,11 @@ function GraphSession({ transport, hostName, workspaceControl }: Props) {
           {waiting && (
             <p role="status" className="graph-status">
               Sent to {hostName}. You can keep exploring while it responds.
+            </p>
+          )}
+          {!busy && !waiting && !error && latest?.status === 'complete' && (
+            <p role="status" className="graph-status">
+              Updated to Revision {doc.revision}. {latest.reply?.summary}
             </p>
           )}
         </aside>
