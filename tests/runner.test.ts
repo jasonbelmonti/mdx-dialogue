@@ -51,8 +51,12 @@ test('successful exit still requires a bounded valid response and tolerates non-
   const dir = await mkdtemp(join(tmpdir(), 'mdx-result-'));
   const cwd = process.cwd();
   const bin = process.env.CODEX_BIN;
+  const originalData = process.env.MDX_DIALOGUE_DATA_DIR;
+  process.env.MDX_DIALOGUE_DATA_DIR = join(dir, '.data');
   t.after(async () => {
     process.chdir(cwd);
+    if (originalData === undefined) delete process.env.MDX_DIALOGUE_DATA_DIR;
+    else process.env.MDX_DIALOGUE_DATA_DIR = originalData;
     if (bin === undefined) delete process.env.CODEX_BIN;
     else process.env.CODEX_BIN = bin;
     await rm(dir, { recursive: true, force: true });
@@ -89,8 +93,12 @@ test('failed children remove oversized replies while retaining bounded evidence 
   const dir = await mkdtemp(join(tmpdir(), 'mdx-failed-reply-'));
   const cwd = process.cwd();
   const bin = process.env.CODEX_BIN;
+  const originalData = process.env.MDX_DIALOGUE_DATA_DIR;
+  process.env.MDX_DIALOGUE_DATA_DIR = join(dir, '.data');
   t.after(async () => {
     process.chdir(cwd);
+    if (originalData === undefined) delete process.env.MDX_DIALOGUE_DATA_DIR;
+    else process.env.MDX_DIALOGUE_DATA_DIR = originalData;
     if (bin === undefined) delete process.env.CODEX_BIN;
     else process.env.CODEX_BIN = bin;
     await rm(dir, { recursive: true, force: true });
