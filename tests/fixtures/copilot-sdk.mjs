@@ -57,9 +57,12 @@ export async function joinSession({ canvases }) {
   });
   return {
     sessionId: ctx.sessionId,
-    send: async ({ prompt }) => {
+    send: async ({ prompt, displayPrompt }) => {
       const doc = canvas.actions[0].handler(ctx);
       assert.ok(prompt.includes(doc.submissions[0].submissionId));
+      assert.equal(displayPrompt, 'Build this graph\n\nMDX Dialogue · Whole document');
+      assert.doesNotMatch(prompt, /Codex/);
+      assert.match(prompt, /respond_to_graph/);
       canvas.actions[1].handler({
         ...ctx,
         input: { submissionId: doc.submissions[0].submissionId, reply },

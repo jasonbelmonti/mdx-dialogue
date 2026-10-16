@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { graphMdxContract } from './mdx-contract.js';
 export const graphId = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/);
 export const nodeSchema = z.object({
   id: graphId,
@@ -17,7 +18,7 @@ export const graphSchema = z.object({
 export const graphReplySchema = z.object({
   title: z.string().min(1).max(140),
   summary: z.string().min(1).max(600),
-  mdx: z.string().min(1).max(12000),
+  mdx: z.string().min(1).max(12000).describe(graphMdxContract),
   graphs: z.array(graphSchema).min(1).max(3),
 });
 export const targetSchema = z.object({ graphId, nodeId: graphId });

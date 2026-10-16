@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import { createGraphCanvas } from '../server/copilot/canvas.js';
 import { CanvasDocuments } from '../server/copilot/documents.js';
 import type { GraphDialogue, GraphReply } from '../shared/graph/schema.js';
+import type { AnnotationMessage } from '../server/copilot/annotation-message.js';
+import { graphMdxContract } from '../shared/graph/mdx-contract.js';
 
 const reply: GraphReply = {
   title: 'Canvas test',
@@ -27,24 +29,44 @@ const identity = { sessionId: 'test-session', instanceId: 'test-instance' };
 
 test('Canvas loop saves selected-node input, sends to this session, validates replies and restores after restart', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'mdx-canvas-'));
-  const prompts: string[] = [];
+  const prompts: AnnotationMessage[] = [];
   const options = {
     directory,
     html: '<html>Canvas</html>',
     session: () => ({
       sessionId: identity.sessionId,
-      send: async ({ prompt }: { prompt: string }) => {
+      send: async (message: AnnotationMessage) => {
         const disk = JSON.parse(readFileSync(join(directory, readdirSync(directory)[0]), 'utf8'));
         assert.equal(disk[0].submissions[0].status, 'running');
         assert.deepEqual(disk[0].submissions[0].target, { graphId: 'loop', nodeId: 'input' });
-        prompts.push(prompt);
+        prompts.push(message);
         return 'message-id';
       },
     }),
   };
   let provider = await createGraphCanvas(options);
   try {
-    const opened = provider.canvas.open({ ...identity, input: { initial: reply } });
+    assert.ok(provider.canvas.description.includes(graphMdxContract));
+    const openSchema = provider.canvas.inputSchema as any;
+    const responseSchema = provider.canvas.actions[1].inputSchema as any;
+    for (const description of [
+      openSchema.properties.initial.properties.mdx.description,
+      responseSchema.properties.reply.properties.mdx.description,
+    ]) {
+      assert.equal(description, graphMdxContract);
+      assert.match(description, /No blockquotes/);
+    }
+    const example = graphMdxContract.match(/<FlowGraph[^>]+\/>/)![0];
+    assert.throws(
+      () =>
+        provider.canvas.open({
+          ...identity,
+          input: { initial: { ...reply, mdx: '> Unsupported quote\n\n' + reply.mdx } },
+        }),
+      /Unsupported MDX syntax: blockquote/,
+    );
+    const schemaExample = { ...reply, mdx: example.replace('data="system"', 'data="loop"') };
+    const opened = provider.canvas.open({ ...identity, input: { initial: schemaExample } });
     const url = new URL(opened.url);
     const headers = {
       Authorization: `Bearer ${url.hash.slice(1)}`,
@@ -74,8 +96,13 @@ test('Canvas loop saves selected-node input, sends to this session, validates re
     assert.equal((await send({ ...input, documentId: randomUUID() })).status, 400);
     assert.equal((await send(input)).status, 200);
     assert.equal(prompts.length, 1);
-    assert.match(prompts[0], new RegExp(input.submissionId));
-    assert.match(prompts[0], /get_document/);
+    assert.match(prompts[0].prompt, new RegExp(input.submissionId));
+    assert.match(prompts[0].prompt, /get_document/);
+    assert.match(prompts[0].prompt, /respond_to_graph/);
+    assert.ok(prompts[0].prompt.includes(JSON.stringify(identity.instanceId)));
+    assert.equal(prompts[0].displayPrompt, input.annotation + '\n\nMDX Dialogue · Input · Loop');
+    assert.doesNotMatch(JSON.stringify(prompts[0]), /Codex/);
+    assert.doesNotMatch(prompts[0].displayPrompt, /invoke_canvas_action|submissionId|FlowGraph/);
     assert.equal(read().submissions[0].annotation, input.annotation);
     const respond = (value: unknown) =>
       provider.canvas.actions[1].handler({
@@ -127,13 +154,15 @@ test('failed Copilot delivery retains exact input and retry completes without an
   const directory = mkdtempSync(join(tmpdir(), 'mdx-canvas-failure-'));
   let reject = true;
   let sends = 0;
+  const messages: AnnotationMessage[] = [];
   const provider = await createGraphCanvas({
     directory,
     html: '<html />',
     session: () => ({
       sessionId: identity.sessionId,
-      send: async () => {
+      send: async (message) => {
         sends++;
+        messages.push(message);
         if (reject) throw new Error('offline');
         return 'sent';
       },
@@ -161,6 +190,8 @@ test('failed Copilot delivery retains exact input and retry completes without an
     reject = false;
     assert.equal((await send()).status, 200);
     assert.equal(sends, 2);
+    assert.deepEqual(messages[0], messages[1]);
+    assert.equal(messages[1].displayPrompt, input.annotation + '\n\nMDX Dialogue · Whole document');
     assert.equal(read().submissions.length, 1);
     provider.canvas.actions[1].handler({
       ...identity,
