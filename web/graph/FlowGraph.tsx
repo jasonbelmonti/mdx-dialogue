@@ -1,45 +1,30 @@
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
-  Handle,
-  Position,
   MarkerType,
   useNodesState,
-  type Node,
-  type NodeProps,
   type NodeChange,
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
 import type { Graph, GraphTarget } from '../../shared/graph/schema.js';
+import { Idea, type IdeaNode } from './IdeaNode.js';
 import '@xyflow/react/dist/style.css';
 import './graph.css';
-type IdeaNode = Node<{ label: string; description: string; kind: string }, 'idea'>;
-const Idea = memo(function Idea({ data, selected }: NodeProps<IdeaNode>) {
-  return (
-    <div className={`idea-node ${data.kind} ${selected ? 'is-selected' : ''}`}>
-      <Handle type="target" position={Position.Left} />
-      <span className="node-kind">{data.kind}</span>
-      <strong>{data.label}</strong>
-      <p>{data.description}</p>
-      <Handle type="source" position={Position.Right} />
-    </div>
-  );
-});
 const nodeTypes = { idea: Idea };
 function layout(graph: Graph): IdeaNode[] {
   const g = new dagre.graphlib.Graph()
     .setGraph({ rankdir: 'LR', nodesep: 30, ranksep: 70, marginx: 20, marginy: 20 })
     .setDefaultEdgeLabel(() => ({}));
-  graph.nodes.forEach((n) => g.setNode(n.id, { width: 210, height: 112 }));
+  graph.nodes.forEach((n) => g.setNode(n.id, { width: 210, height: 144 }));
   graph.edges.forEach((e) => g.setEdge(e.source, e.target));
   dagre.layout(g);
   return graph.nodes.map((n) => ({
     id: n.id,
     type: 'idea',
     data: n,
-    position: { x: g.node(n.id).x - 105, y: g.node(n.id).y - 56 },
+    position: { x: g.node(n.id).x - 105, y: g.node(n.id).y - 72 },
     ariaLabel: `Select ${n.label}`,
   }));
 }
@@ -110,7 +95,9 @@ export function FlowGraph({
           <Controls showInteractive={false} />
         </ReactFlow>
       </div>
-      <p className="graph-hint">Select a node to discuss it. Drag to arrange; scroll to zoom.</p>
+      <p className="graph-hint">
+        Read details for full text. Select a node to discuss it. Drag to arrange; scroll to zoom.
+      </p>
     </figure>
   );
 }
