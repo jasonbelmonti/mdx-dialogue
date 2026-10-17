@@ -6,6 +6,8 @@ import {
   type GraphSubmission,
 } from '../../shared/graph/schema.js';
 import { validateGraphReply } from '../../shared/graph/validation.js';
+import { inspectorSchema, type Inspector } from '../../shared/inspector/schema.js';
+import { sourceContext } from '../../shared/inspector/selection.js';
 export class GraphStore {
   private docs = new Map<string, GraphDialogue>();
   constructor(
@@ -15,6 +17,7 @@ export class GraphStore {
     for (const original of initial) {
       const doc = structuredClone(original);
       if (doc.content) validateGraphReply(doc.content);
+      if (doc.inspector) inspectorSchema.parse(doc.inspector);
       for (const sub of doc.submissions)
         if (sub.status === 'running') {
           sub.status = 'failed';
@@ -30,11 +33,17 @@ export class GraphStore {
     this.docs = next;
     return this.read(doc.id);
   }
-  create(initial?: unknown) {
+  create(initial?: unknown, inspector?: Inspector) {
     if (this.docs.size >= 100)
       throw new Error('Saved document limit reached. Reopen an existing document.');
     const content = initial === undefined ? null : validateGraphReply(initial);
-    return this.commit({ id: randomUUID(), revision: 1, content, submissions: [] });
+    return this.commit({
+      id: randomUUID(),
+      revision: 1,
+      content,
+      submissions: [],
+      ...(inspector ? { inspector: inspectorSchema.parse(inspector) } : {}),
+    });
   }
   read(id: string): GraphDialogue {
     const doc = this.docs.get(id);
@@ -56,6 +65,13 @@ export class GraphStore {
       throw new Error('A response is already pending.');
     if (doc.submissions.length >= 20)
       throw new Error('Document submission limit reached. Start a new document.');
+    if (input.target && input.sourceTarget)
+      throw new Error('Select one graph node or source item.');
+    if (input.sourceTarget && !doc.inspector)
+      throw new Error('This document has no source snapshot.');
+    const context = input.sourceTarget
+      ? sourceContext(doc.inspector!, input.sourceTarget)
+      : undefined;
     if (
       input.target &&
       !doc.content?.graphs.some(
@@ -67,6 +83,7 @@ export class GraphStore {
       ...input,
       status: 'awaiting-model',
       createdAt: new Date().toISOString(),
+      ...(context ? { sourceContext: context } : {}),
     });
     return this.commit(doc);
   }

@@ -1,12 +1,14 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { GraphTransport } from './transport.js';
 import type { GraphInput, GraphTarget } from '../../shared/graph/schema.js';
+import type { SourceTarget } from '../../shared/inspector/schema.js';
 export function useGraphDialogue(transport: GraphTransport) {
   const { snapshot, subscribe, connectionError, deliver, refresh } = transport;
   const doc = useSyncExternalStore(subscribe, snapshot);
   const startupError = useSyncExternalStore(subscribe, connectionError);
   const [annotation, setAnnotation] = useState('');
   const [selected, setSelected] = useState<GraphTarget | null>(null);
+  const [sourceSelected, setSourceSelected] = useState<SourceTarget | null>(null);
   const [busy, setBusy] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState('');
@@ -17,6 +19,7 @@ export function useGraphDialogue(transport: GraphTransport) {
     if (previous) {
       setAnnotation(previous.annotation);
       setSelected(previous.target);
+      setSourceSelected(previous.sourceTarget ?? null);
       if (previous.status !== 'complete') setRetryInput(previous);
       setWaiting(['awaiting-model', 'running'].includes(previous.status));
       setError(previous.status === 'failed' ? (previous.error ?? 'Response failed.') : '');
@@ -73,6 +76,7 @@ export function useGraphDialogue(transport: GraphTransport) {
             submissionId: crypto.randomUUID(),
             target,
             annotation,
+            ...(sourceSelected ? { sourceTarget: sourceSelected } : {}),
           };
     setBusy(true);
     setError('');
@@ -93,6 +97,8 @@ export function useGraphDialogue(transport: GraphTransport) {
     setAnnotation,
     selected,
     setSelected,
+    sourceSelected,
+    setSourceSelected,
     busy,
     waiting,
     error,

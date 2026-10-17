@@ -169,6 +169,12 @@ summary {
 .graph-status {
   color: var(--graph-muted);
 }
+.graph-completed {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .empty-document {
   max-width: 430px;
   margin: 20px auto;

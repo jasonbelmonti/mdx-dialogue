@@ -6,6 +6,11 @@ import type { GraphTransport } from '../graph/transport.js';
 export function createCanvasTransport(token: string): GraphTransport & { close(): void } {
   const state = new DocumentState<GraphDialogue>((next, current) => {
     if (next.revision === current.revision) next.content = current.content;
+    if (current.inspector) {
+      if (next.inspector?.id !== current.inspector.id)
+        throw new Error('Source snapshot changed unexpectedly. Reopen this workspace.');
+      next.inspector = current.inspector;
+    }
     return next;
   });
   const listeners = new Set<() => void>();

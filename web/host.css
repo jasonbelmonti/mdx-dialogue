@@ -1,10 +1,17 @@
 * {
   box-sizing: border-box;
 }
+:root {
+  color-scheme: light dark;
+}
 body {
   margin: 0;
-  background: #f7f8fa;
-  color: #252535;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: light-dark(#f7f8fa, #181818);
+  color: light-dark(#252535, #ededed);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 .host-bar {
@@ -13,22 +20,30 @@ body {
   gap: 20px;
   padding: 14px 26px;
   min-height: 54px;
-  background: white;
-  border-bottom: 1px solid #e2e4eb;
+  background: light-dark(white, #181818);
+  border-bottom: 1px solid light-dark(#e2e4eb, #383838);
   font-size: 13px;
+  flex-shrink: 0;
 }
 .host-bar strong {
   font-size: 15px;
 }
 .host-bar span {
-  color: #6c6c7d;
+  color: light-dark(#6c6c7d, #adadad);
+}
+.host-bar a {
+  color: light-dark(#315ca0, #9bbcff);
 }
 #host-status {
   margin-left: auto;
 }
+#surface {
+  flex: 1;
+  min-height: 0;
+}
 iframe {
   width: 100%;
-  height: calc(100dvh - 56px);
+  height: 100%;
   border: none;
   display: block;
 }
@@ -46,8 +61,5 @@ iframe {
   #host-status {
     margin-left: 0;
     font-size: 11px;
-  }
-  iframe {
-    height: calc(100dvh - 75px);
   }
 }
