@@ -24,6 +24,11 @@ app.onhostcontextchanged = (context) => {
 };
 const state = new DocumentState<GraphDialogue>((next, current) => {
   if (next.revision === current.revision) next.content = current.content;
+  if (current.inspector) {
+    if (next.inspector?.id !== current.inspector.id)
+      throw new Error('Source snapshot changed unexpectedly. Reopen this workspace.');
+    next.inspector = current.inspector;
+  }
   return next;
 });
 let error: string | null = null;
@@ -124,7 +129,7 @@ export async function deliver(input: GraphInput) {
     content: [
       {
         type: 'text',
-        text: `Read get_graph_dialogue for document ${input.documentId}, respond to submission ${input.submissionId}, and call respond_to_graph with the revised MDX and graph data. The saved annotation and selected node identify the user's request.`,
+        text: `Read get_graph_dialogue for document ${input.documentId}, respond to submission ${input.submissionId}, and call respond_to_graph with the answer's MDX and graph data. The saved annotation and target identify the user's request. For a sourceTarget, use its server-resolved sourceContext, cite source identities and evidence limits, and preserve the read-only task/history snapshots. The reply appears in the same workspace's Response tab.`,
       },
     ],
   });

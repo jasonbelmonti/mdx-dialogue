@@ -6,9 +6,12 @@ export async function joinSession({ canvases }) {
   const canvas = canvases[0];
   const ctx = { sessionId: 'isolated-host', instanceId: 'one', input: {} };
   // Native Copilot restores panels during registration, before joinSession resolves.
-  const url = new URL(canvas.open(ctx).url);
+  const url = new URL((await canvas.open(ctx)).url);
   const before = canvas.actions[0].handler(ctx);
-  assert.throws(() => canvas.open({ ...ctx, sessionId: 'another-host' }), /Wrong Copilot session/);
+  await assert.rejects(
+    () => canvas.open({ ...ctx, sessionId: 'another-host' }),
+    /Wrong Copilot session/,
+  );
   const reply = {
     title: 'Bundled loop',
     summary: 'Saved',
@@ -25,7 +28,7 @@ export async function joinSession({ canvases }) {
   setImmediate(async () => {
     try {
       assert.equal(canvas.id, 'mdx-dialogue');
-      assert.equal(canvas.open(ctx).url, url.href);
+      assert.equal((await canvas.open(ctx)).url, url.href);
       const page = await fetch(url.origin);
       assert.match(await page.text(), /<html/);
       const input = {

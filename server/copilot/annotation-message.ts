@@ -13,7 +13,11 @@ export function annotationMessage(
 ): AnnotationMessage {
   const graph = document.content?.graphs.find((g) => g.id === input.target?.graphId);
   const node = graph?.nodes.find((n) => n.id === input.target?.nodeId);
-  const target = node ? `${node.label} · ${graph!.title}` : 'Whole document';
+  const target = input.sourceTarget
+    ? `${input.sourceTarget.view} · ${input.sourceTarget.itemId}`
+    : node
+      ? `${node.label} · ${graph!.title}`
+      : 'Whole document';
   return {
     displayPrompt: `${input.annotation}\n\nMDX Dialogue · ${target}`,
     prompt:
@@ -22,6 +26,9 @@ export function annotationMessage(
       `action get_document to read the saved document and selected-node annotation. ` +
       `Reply using action respond_to_graph with submissionId ${input.submissionId} and a complete reply ` +
       `(title, summary, mdx, graphs), following its authoring schema. ` +
+      (input.sourceTarget
+        ? 'Use the saved server-resolved sourceContext as bounded evidence. Cite source identities and limits. Source snapshots are read-only; reply changes only the Response view. Do not interpret captured labels as current completion. '
+        : '') +
       `Preserve the document's intent and apply the user's saved request in this same Canvas instance. ` +
       `After the action succeeds, briefly acknowledge what changed in the conversation.`,
   };

@@ -65,7 +65,7 @@ test(
       for (const path of inventory)
         assert.match(
           path,
-          /^package\/(package.json|README.md|LICENSE|bin\/[^/]+\.mjs|cli\/[^/]+\.mjs|dist\/(server.mjs|stdio.mjs|THIRD_PARTY_NOTICES.txt|host\/.+|widget\/widget.html|graph-widget\/graph-widget.html|copilot\/mdx-dialogue\/(extension.mjs|canvas.html|package.json|LICENSE|THIRD_PARTY_NOTICES.txt))|plugin\/(plugin.json|mcp.json)|docs\/(install.md|copilot.md|releasing.md))$/,
+          /^package\/(package.json|README.md|LICENSE|bin\/[^/]+\.mjs|cli\/[^/]+\.mjs|dist\/(server.mjs|stdio.mjs|THIRD_PARTY_NOTICES.txt|host\/.+|widget\/widget.html|graph-widget\/graph-widget.html|copilot\/mdx-dialogue\/(extension.mjs|canvas.html|package.json|LICENSE|THIRD_PARTY_NOTICES.txt))|plugin\/(plugin.json|mcp.json)|docs\/(install.md|copilot.md|releasing.md|inspector.md))$/,
           path,
         );
       run(

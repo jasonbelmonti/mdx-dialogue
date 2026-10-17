@@ -19,7 +19,12 @@ async function start() {
       updateModelContext: { text: {} },
       message: { text: {} },
     },
-    { hostContext: { theme: 'light', displayMode: 'inline' } },
+    {
+      hostContext: {
+        theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+        displayMode: graphMode ? 'fullscreen' : 'inline',
+      },
+    },
   );
   bridge.oncalltool = async (params) => {
     if (

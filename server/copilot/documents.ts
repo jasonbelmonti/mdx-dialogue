@@ -9,6 +9,7 @@ import {
 import { GraphStore } from '../graph/store.js';
 import { snapshotStorage } from '../snapshot-storage.js';
 import { annotationMessage, type AnnotationMessage } from './annotation-message.js';
+import type { Inspector } from '../../shared/inspector/schema.js';
 
 export interface CanvasIdentity {
   sessionId: string;
@@ -44,7 +45,18 @@ export class CanvasDocuments {
       .update(JSON.stringify([identity.sessionId, identity.instanceId]))
       .digest('hex');
   }
-  open(identity: CanvasIdentity, initial?: unknown) {
+  private storage(key: string) {
+    return snapshotStorage(join(this.directory, `${key}.json`), (value) =>
+      z.array(graphDialogueSchema).max(1).parse(value),
+    );
+  }
+  /** Restoring a saved Canvas must not reread disposable import files. */
+  restore(identity: CanvasIdentity) {
+    const key = this.key(identity);
+    if (this.instances.has(key) || this.storage(key).initial.length) return this.open(identity);
+    return undefined;
+  }
+  open(identity: CanvasIdentity, initial?: unknown, inspector?: Inspector) {
     const key = this.key(identity);
     const existing = this.instances.get(key);
     if (existing?.active) return existing;
@@ -55,11 +67,9 @@ export class CanvasDocuments {
       existing.active = true;
       return existing;
     }
-    const storage = snapshotStorage(join(this.directory, `${key}.json`), (value) =>
-      z.array(graphDialogueSchema).max(1).parse(value),
-    );
+    const storage = this.storage(key);
     const store = new GraphStore(storage.initial, storage.save);
-    const documentId = storage.initial[0]?.id ?? store.create(initial).id;
+    const documentId = storage.initial[0]?.id ?? store.create(initial, inspector).id;
     const instance = {
       ...identity,
       store,

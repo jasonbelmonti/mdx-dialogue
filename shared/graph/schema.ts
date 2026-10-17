@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { graphMdxContract } from './mdx-contract.js';
+import { inspectorSchema, sourceTargetSchema } from '../inspector/schema.js';
 export const graphId = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/);
 export const nodeSchema = z.object({
   id: graphId,
@@ -19,7 +20,7 @@ export const graphReplySchema = z.object({
   title: z.string().min(1).max(140),
   summary: z.string().min(1).max(600),
   mdx: z.string().min(1).max(12000).describe(graphMdxContract),
-  graphs: z.array(graphSchema).min(1).max(3),
+  graphs: z.array(graphSchema).max(3),
 });
 export const targetSchema = z.object({ graphId, nodeId: graphId });
 export const graphInputSchema = z.object({
@@ -28,6 +29,7 @@ export const graphInputSchema = z.object({
   submissionId: z.uuid(),
   annotation: z.string().trim().min(1).max(2000),
   target: targetSchema.nullable(),
+  sourceTarget: sourceTargetSchema.optional(),
 });
 export const graphSubmissionSchema = graphInputSchema.extend({
   status: z.enum(['awaiting-model', 'running', 'complete', 'failed']),
@@ -36,12 +38,14 @@ export const graphSubmissionSchema = graphInputSchema.extend({
   error: z.string().optional(),
   reply: graphReplySchema.optional(),
   source: z.enum(['codex-cli', 'host-model']).optional(),
+  sourceContext: z.string().max(48000).optional(),
 });
 export const graphDialogueSchema = z.object({
   id: z.uuid(),
   revision: z.number().int().positive(),
   content: graphReplySchema.nullable(),
   submissions: z.array(graphSubmissionSchema),
+  inspector: inspectorSchema.optional(),
 });
 export const graphSnapshotSchema = z.object({ graphDialogue: graphDialogueSchema });
 export type Graph = z.infer<typeof graphSchema>;

@@ -1,155 +1,132 @@
-import { useSyncExternalStore, type ReactNode } from 'react';
+import { useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { GraphTransport } from './transport.js';
 import { GraphDocument } from './GraphDocument.js';
+import { GraphComposer } from './GraphComposer.js';
 import { useGraphDialogue } from './useGraphDialogue.js';
+import { Relationships } from '../inspector/Relationships.js';
+import { History } from '../inspector/History.js';
 import './studio.css';
+import '../inspector/inspector.css';
 interface Props {
   transport: GraphTransport;
   hostName: string;
   workspaceControl?: ReactNode;
 }
+type View = 'relationships' | 'history' | 'response';
 export function GraphPanel(props: Props) {
   const doc = useSyncExternalStore(props.transport.subscribe, props.transport.snapshot);
   return <GraphSession key={doc?.id ?? 'loading'} {...props} />;
 }
 function GraphSession({ transport, hostName, workspaceControl }: Props) {
   const state = useGraphDialogue(transport);
-  const { doc, selected, annotation, busy, waiting, error } = state;
+  const { doc, selected, sourceSelected } = state;
+  const [view, setView] = useState<View>(
+    doc?.submissions.at(-1)?.sourceTarget?.view ?? (doc?.inspector ? 'relationships' : 'response'),
+  );
+  const documentArea = useRef<HTMLDivElement>(null);
   if (!doc)
     return (
       <main className="graph-loading" role="status">
         {state.startupError ?? 'Connecting your graph document…'}
       </main>
     );
-  const content = doc.content;
-  const latest = doc.submissions.at(-1);
-  const selectedNode = content?.graphs
-    .find((g) => g.id === selected?.graphId)
-    ?.nodes.find((n) => n.id === selected?.nodeId);
+  const { content, inspector } = doc;
+  const accepted = [...doc.submissions].reverse().find((s) => s.status === 'complete');
+  const selectSource = (itemId: string) => {
+    if (!inspector || view === 'response') return;
+    state.setSelected(null);
+    state.setSourceSelected({ snapshotId: inspector.id, view, itemId });
+  };
+  const changeView = (next: View) => {
+    setView(next);
+    state.setSelected(null);
+    state.setSourceSelected(null);
+    documentArea.current?.scrollTo(0, 0);
+  };
   return (
     <main className="graph-studio">
       <header className="studio-heading">
-        <h1>{content?.title ?? 'New visual document'}</h1>
+        <h1>
+          {inspector
+            ? `${inspector.history.source} · Task workspace`
+            : (content?.title ?? 'New visual document')}
+        </h1>
         {workspaceControl}
         <span className="revision">Revision {doc.revision}</span>
       </header>
-      <div className={content ? 'studio-layout' : 'studio-layout empty'}>
-        <div className="document-area" tabIndex={0} role="region" aria-label="Document">
-          {content ? (
-            <GraphDocument
-              content={content}
-              selected={selectedNode ? selected : null}
-              onSelect={state.setSelected}
+      {inspector && (
+        <>
+          <nav className="workspace-tabs" aria-label="Workspace views">
+            {(['relationships', 'history', 'response'] as const).map((v) => (
+              <button type="button" key={v} aria-pressed={view === v} onClick={() => changeView(v)}>
+                {v === 'relationships'
+                  ? 'Relationships'
+                  : v === 'history'
+                    ? 'History'
+                    : `Response${content ? ` · ${doc.revision}` : ''}`}
+              </button>
+            ))}
+          </nav>
+          <p className="snapshot-note">
+            Read-only snapshots · imported {new Date(inspector.importedAt).toLocaleString()} ·
+            current files may differ
+          </p>
+        </>
+      )}
+      <div className={content || inspector ? 'studio-layout' : 'studio-layout empty'}>
+        <div
+          ref={documentArea}
+          className="document-area"
+          tabIndex={0}
+          role="region"
+          aria-label={inspector ? view : 'Document'}
+        >
+          {inspector && view === 'relationships' ? (
+            <Relationships
+              task={inspector.task}
+              selected={sourceSelected?.view === view ? sourceSelected.itemId : undefined}
+              onSelect={selectSource}
             />
+          ) : inspector && view === 'history' ? (
+            <History
+              history={inspector.history}
+              selected={sourceSelected?.view === view ? sourceSelected.itemId : undefined}
+              onSelect={selectSource}
+            />
+          ) : content ? (
+            <>
+              {inspector && accepted?.sourceTarget && (
+                <p className="source-note">
+                  Response to {accepted.sourceTarget.view} · {accepted.sourceTarget.itemId}. Source
+                  snapshots are unchanged.
+                </p>
+              )}
+              <GraphDocument
+                content={content}
+                selected={selected}
+                onSelect={(target) => {
+                  state.setSourceSelected(null);
+                  state.setSelected(target);
+                }}
+              />
+            </>
           ) : (
             <section className="empty-document">
-              <h2>What are you working on?</h2>
-              <p>Describe a system, process, or question below to build a visual document.</p>
+              <h2>{inspector ? 'Ask about your project' : 'What are you working on?'}</h2>
+              <p>
+                {inspector
+                  ? 'Select a task entity or history event, then ask a question below. The answer appears here.'
+                  : 'Describe a system, process, or question below to build a visual document.'}
+              </p>
             </section>
           )}
         </div>
-        <aside className="conversation-card" aria-label="Discuss this document">
-          {content && (
-            <>
-              <div className="target-control">
-                <label htmlFor="graph-target">Discuss</label>
-                <select
-                  id="graph-target"
-                  value={selectedNode ? `${selected!.graphId}/${selected!.nodeId}` : ''}
-                  onChange={(e) => {
-                    const [graphId, nodeId] = e.target.value.split('/');
-                    state.setSelected(graphId ? { graphId, nodeId } : null);
-                  }}
-                  disabled={busy || waiting}
-                >
-                  <option value="">Whole document</option>
-                  {content.graphs.flatMap((g) =>
-                    g.nodes.map((n) => (
-                      <option key={`${g.id}/${n.id}`} value={`${g.id}/${n.id}`}>
-                        {n.label} · {g.title}
-                      </option>
-                    )),
-                  )}
-                </select>
-              </div>
-              {selectedNode && (
-                <div className="selected-detail">
-                  <strong>{selectedNode.label}</strong>
-                  <p>{selectedNode.description}</p>
-                </div>
-              )}
-            </>
-          )}
-          <label className="note-label" htmlFor="graph-note">
-            {content
-              ? 'What would you like to explore or change?'
-              : 'What would you like to understand?'}
-          </label>
-          <textarea
-            id="graph-note"
-            value={annotation}
-            maxLength={2000}
-            rows={3}
-            disabled={busy || waiting}
-            onChange={(e) => state.setAnnotation(e.target.value)}
-            placeholder={
-              content
-                ? 'Ask a question or describe a change…'
-                : 'Describe what you want to explore…'
-            }
-          />
-          <div className="composer-actions">
-            {content && (
-              <details className="graph-receipt">
-                <summary>Activity</summary>
-                <pre>
-                  {JSON.stringify(
-                    { documentId: doc.id, revision: doc.revision, latest: doc.submissions.at(-1) },
-                    null,
-                    2,
-                  )}
-                </pre>
-              </details>
-            )}
-            <button
-              className="graph-submit"
-              type="button"
-              disabled={busy || waiting || !annotation.trim()}
-              onClick={() => void state.send(!!error && state.canRetry)}
-            >
-              {busy
-                ? 'Sending…'
-                : waiting
-                  ? 'The model is composing…'
-                  : error && state.canRetry
-                    ? 'Retry saved request'
-                    : content
-                      ? 'Discuss & revise'
-                      : 'Create document'}
-              <span aria-hidden="true">↗</span>
-            </button>
-          </div>
-          {error && (
-            <p role="alert" className="graph-error">
-              {error}
-            </p>
-          )}
-          {state.startupError && (
-            <p role="alert" className="graph-error">
-              {state.startupError}
-            </p>
-          )}
-          {waiting && (
-            <p role="status" className="graph-status">
-              Sent to {hostName}. You can keep exploring while it responds.
-            </p>
-          )}
-          {!busy && !waiting && !error && latest?.status === 'complete' && (
-            <p role="status" className="graph-status">
-              Updated to Revision {doc.revision}. {latest.reply?.summary}
-            </p>
-          )}
-        </aside>
+        <GraphComposer
+          state={state}
+          hostName={hostName}
+          showGraphTargets={view === 'response'}
+          requireSourceTarget={!!inspector && view !== 'response'}
+        />
       </div>
     </main>
   );

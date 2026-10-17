@@ -39,6 +39,8 @@ CLI event capture and decoded reply files each have a 2 MB limit. Output overflo
 
 ## A reusable graph vocabulary
 
+Source builds also provide a [task and Capsule inspector](docs/inspector.md): **Relationships** and **History** share the bottom composer, with answers in **Response**. Import exact task Markdown, a passing Markdown Trace graph export and matching Capsule history JSON using `open_project_inspector`. The views preserve source identities and captured provenance independently of model-authored replies. This first slice uses read-only snapshots.
+
 The model tool `open_graph_dialogue` describes when a diagram helps: relationships, dependencies, processes and concepts. It accepts an optional `document` so a model can compose an interactive explanation directly, or can open a blank prompt surface. Subsequent node annotations use `respond_to_graph` to update the existing document.
 
 A graph document contains `title`, `summary`, `mdx` and a `graphs` array. MDX combines prose with literal component references:
@@ -67,7 +69,7 @@ The standalone `site/package.json` intentionally omits `type`: Docusaurus-genera
 
 ## MCP integration
 
-Graph tools: `open_graph_dialogue`, `get_graph_dialogue`, `submit_graph_annotation` (app visibility), and `respond_to_graph` (model visibility). The existing layout tools remain available. Each flow has a self-contained MCP App resource with conversation-panel metadata.
+Graph tools: `open_graph_dialogue`, `open_project_inspector`, `get_graph_dialogue`, `submit_graph_annotation` (app visibility), and `respond_to_graph` (model visibility). The existing layout tools remain available. Each flow has a self-contained MCP App resource with conversation-panel metadata.
 
 ```sh
 npm run build
@@ -120,6 +122,7 @@ Build before the MCP resource tests on a fresh checkout. `npm run dev` builds th
 Ownership:
 
 - `shared/graph/`: semantic schemas, graph/MDX validation and model vocabulary.
+- `shared/inspector/`, `server/inspector/`, `web/inspector/`: snapshot contracts and selected context, verified file import, and source views respectively.
 - `shared/mdx-syntax.ts`: shared restricted syntax parser.
 - `server/graph/`: graph state transitions, persistence, MCP tools and HTTP dispatch.
 - `bin/`, `cli/` and `scripts/build-*.mjs`: installed commands, preservation-safe installation and release bundles.

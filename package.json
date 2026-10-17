@@ -83,7 +83,8 @@
     "docs/install.md",
     "docs/copilot.md",
     "docs/releasing.md",
-    "dist/copilot/mdx-dialogue/LICENSE"
+    "dist/copilot/mdx-dialogue/LICENSE",
+    "docs/inspector.md"
   ],
   "repository": {
     "type": "git",

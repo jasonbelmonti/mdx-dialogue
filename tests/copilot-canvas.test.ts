@@ -57,7 +57,7 @@ test('Canvas loop saves selected-node input, sends to this session, validates re
       assert.match(description, /No blockquotes/);
     }
     const example = graphMdxContract.match(/<FlowGraph[^>]+\/>/)![0];
-    assert.throws(
+    await assert.rejects(
       () =>
         provider.canvas.open({
           ...identity,
@@ -66,7 +66,7 @@ test('Canvas loop saves selected-node input, sends to this session, validates re
       /Unsupported MDX syntax: blockquote/,
     );
     const schemaExample = { ...reply, mdx: example.replace('data="system"', 'data="loop"') };
-    const opened = provider.canvas.open({ ...identity, input: { initial: schemaExample } });
+    const opened = await provider.canvas.open({ ...identity, input: { initial: schemaExample } });
     const url = new URL(opened.url);
     const headers = {
       Authorization: `Bearer ${url.hash.slice(1)}`,
@@ -116,7 +116,7 @@ test('Canvas loop saves selected-node input, sends to this session, validates re
       /Wrong Copilot session/,
     );
     const other = { ...identity, instanceId: 'another-instance' };
-    provider.canvas.open(other);
+    await provider.canvas.open(other);
     assert.throws(
       () =>
         provider.canvas.actions[1].handler({
@@ -139,7 +139,7 @@ test('Canvas loop saves selected-node input, sends to this session, validates re
     assert.equal((await fetch(`${url.origin}/document`, { headers })).status, 401);
     await provider.close();
     provider = await createGraphCanvas(options);
-    const reopened = provider.canvas.open(identity);
+    const reopened = await provider.canvas.open(identity);
     assert.notEqual(reopened.url, opened.url);
     assert.equal(read().id, initial.id);
     assert.equal(read().revision, 2);
@@ -169,7 +169,7 @@ test('failed Copilot delivery retains exact input and retry completes without an
     }),
   });
   try {
-    const url = new URL(provider.canvas.open(identity).url);
+    const url = new URL((await provider.canvas.open(identity)).url);
     const headers = {
       Authorization: `Bearer ${url.hash.slice(1)}`,
       'Content-Type': 'application/json',
