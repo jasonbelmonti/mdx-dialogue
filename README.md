@@ -8,9 +8,11 @@ For Copilot desktop, see [installing and using the Canvas](docs/copilot.md). It 
 
 ## Install the beta
 
-The beta release is `@jasonbelmonti/mdx-dialogue@0.1.0-beta.2` on npm's `next` tag. See [installation, data migration and upgrades](docs/install.md) for Codex and Copilot, and [the release procedure](docs/releasing.md) for maintainers. The package contains prebuilt UI and a compiled runtime; no developer checkout is needed.
+The beta release is `@jasonbelmonti/mdx-dialogue@0.1.0-beta.3` on npm's `next` tag. See [installation, data migration and upgrades](docs/install.md) for Codex and Copilot, and [the release procedure](docs/releasing.md) for maintainers. The package contains prebuilt UI and a compiled runtime; no developer checkout is needed.
 
 Copilot Canvas remains experimental, and controlled package tests are distinct from native host acceptance.
+
+Beta.3 adds task **Relationships** and Capsule **History** views with a shared bottom composer, a full-text node reader, and recovery after a rejected question or selection. See [the inspector guide](docs/inspector.md) to prepare and discuss a captured task and its history.
 
 ## Run from source
 
@@ -39,7 +41,7 @@ CLI event capture and decoded reply files each have a 2 MB limit. Output overflo
 
 ## A reusable graph vocabulary
 
-Source builds also provide a [task and Capsule inspector](docs/inspector.md): **Relationships** and **History** share the bottom composer, with answers in **Response**. Import exact task Markdown, a passing Markdown Trace graph export and matching Capsule history JSON using `open_project_inspector`. The views preserve source identities and captured provenance independently of model-authored replies. This first slice uses read-only snapshots.
+The [task and Capsule inspector](docs/inspector.md) provides **Relationships** and **History** above the bottom composer, with answers in **Response**. Import exact task Markdown, a passing Markdown Trace graph export and matching Capsule history JSON using `open_project_inspector`. The views preserve source identities and captured provenance independently of model-authored replies. This first slice uses read-only snapshots.
 
 The model tool `open_graph_dialogue` describes when a diagram helps: relationships, dependencies, processes and concepts. It accepts an optional `document` so a model can compose an interactive explanation directly, or can open a blank prompt surface. Subsequent node annotations use `respond_to_graph` to update the existing document.
 

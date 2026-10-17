@@ -1,6 +1,6 @@
 # Install the npm beta
 
-The beta release is `@jasonbelmonti/mdx-dialogue@0.1.0-beta.2`, published under `next`.
+The beta release is `@jasonbelmonti/mdx-dialogue@0.1.0-beta.3`, published under `next`.
 
 Requires Node **22.20+** and npm. The package contains compiled JavaScript and prebuilt UI assets; consumers do not need TypeScript, Vite, Docusaurus or a source checkout. Codex and Copilot use their own host sessions for model replies. The optional browser demo separately requires an authenticated Codex CLI.
 
@@ -9,13 +9,13 @@ Requires Node **22.20+** and npm. The package contains compiled JavaScript and p
 Start the local service and leave this terminal running:
 
 ```sh
-npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.2 serve
+npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.3 serve
 ```
 
 The default endpoint is `http://127.0.0.1:4319/mcp`. Register the matching tagged plugin marketplace:
 
 ```sh
-codex plugin marketplace add jasonbelmonti/mdx-dialogue --ref v0.1.0-beta.2
+codex plugin marketplace add jasonbelmonti/mdx-dialogue --ref v0.1.0-beta.3
 ```
 
 In the desktop Plugins Directory, select **MDX Dialogue** from **MDX Dialogue Beta** and install it. The catalog retains its identifier `mdx-dialogue-local` for compatibility with the earlier development install. Refresh the desktop app and open a chat with the plugin enabled. Ask the model to open an MDX Dialogue graph, select a node, and use **Discuss & revise**. **Open beside chat** requests the persistent side panel when the host supports it.
@@ -27,16 +27,20 @@ If a service already uses port 4319, stop that service yourself before replacing
 ## GitHub Copilot desktop
 
 ```sh
-npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.2 install copilot --user
+npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.3 install copilot --user
 ```
 
 This copies the self-contained Canvas payload, MIT license and dependency notices into `~/.copilot/extensions/mdx-dialogue/`. For one trusted project:
 
 ```sh
-npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.2 install copilot --project /absolute/project
+npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.3 install copilot --project /absolute/project
 ```
 
 That installs into the project's `.github/extensions/mdx-dialogue/`. Copilot supplies its extension SDK. No separate HTTP service, Codex executable or repository dependencies are required. Open a new Copilot session and ask to open the MDX Dialogue Canvas. See [Canvas usage and verified compatibility](copilot.md).
+
+## Task relationships and history
+
+Beta.3 includes **Relationships**, **History**, and **Response** views with the same bottom composer. The [inspector guide](inspector.md) explains how to import a task Markdown file, its Markdown Trace graph export, and a matching Context Capsules history export. Those tools are needed to prepare the inputs; MDX Dialogue reads the exported files without installing or invoking either runtime.
 
 ## Saved data and migration
 
@@ -45,7 +49,7 @@ The installed `serve` command defaults to `~/.mdx-dialogue/codex/`, containing `
 Source-checkout `npm start` retains its prior `.data/` default. To continue using those exact documents with the packaged service, stop all processes using that snapshot and select its existing directory:
 
 ```sh
-npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.2 serve --data-dir /absolute/old-checkout/.data
+npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.3 serve --data-dir /absolute/old-checkout/.data
 ```
 
 To relocate data, first stop all writers and copy the entire old `.data` directory into a new, unused data directory. Start the service with that directory. Do not merge two snapshot files or copy over a live store. There is no automatic data migration or deletion. See the README for single-writer lock recovery.
@@ -54,7 +58,7 @@ Copilot retains its existing default `~/.mdx-dialogue/copilot/`, with separate f
 
 ## Upgrade or roll back
 
-For Codex, stop the foreground service, start the explicitly selected new package version with the same data directory, and update the plugin marketplace to the matching tag. Retain a data backup before upgrades. Rollback across a future incompatible data schema requires restoring a matching backup; this beta does not change the snapshot schema.
+For Codex, stop the foreground service, start the explicitly selected new package version with the same data directory, and update the plugin marketplace to the matching tag. Retain a data backup before upgrades. Beta.3 preserves existing graph documents and adds inspector snapshots and source-selection metadata. Earlier versions do not understand this new data; restore a pre-upgrade backup when rolling back to beta.2 or earlier.
 
 The Copilot installer refuses any existing destination, including symlinks. Close sessions using the extension, then move the **entire old extension folder outside the `extensions/` discovery directory** to a new backup location. For example, on macOS or Linux, after confirming the backup path is unused:
 
@@ -64,7 +68,7 @@ if [ -e "$mdx_backup" ] || [ -L "$mdx_backup" ]; then
   echo "Choose an unused backup path."
 else
   mv "$HOME/.copilot/extensions/mdx-dialogue" "$mdx_backup" &&
-    npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.2 install copilot --user
+    npx --yes @jasonbelmonti/mdx-dialogue@0.1.0-beta.3 install copilot --user
 fi
 ```
 
@@ -86,7 +90,7 @@ npm pack
 Consumers can install the resulting `.tgz` into an empty directory without cloning this repository:
 
 ```sh
-npm install --omit=dev /absolute/path/jasonbelmonti-mdx-dialogue-0.1.0-beta.2.tgz
+npm install --omit=dev /absolute/path/jasonbelmonti-mdx-dialogue-0.1.0-beta.3.tgz
 ./node_modules/.bin/mdx-dialogue --help
 ./node_modules/.bin/mdx-dialogue serve
 ```

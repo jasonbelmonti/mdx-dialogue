@@ -1,6 +1,6 @@
 # Task relationships and Capsule history
 
-This source-build feature adds **Relationships**, **History**, and **Response** views above the same bottom composer. Select an entity or history event, ask a question, then open **Response** when the revision advances. Switching views keeps the draft and clears the selection so the next question cannot silently target the previous view. After an error, editing the question or selection lets you submit the corrected request. **Retry saved request** remains available for the original question and selection; a new request waits until the server confirms that no response is pending.
+Available in npm beta.3 and later, the inspector adds **Relationships**, **History**, and **Response** views above the same bottom composer. Select an entity or history event, ask a question, then open **Response** when the revision advances. Switching views keeps the draft and clears the selection so the next question cannot silently target the previous view. After an error, editing the question or selection lets you submit the corrected request. **Retry saved request** remains available for the original question and selection; a new request waits until the server confirms that no response is pending.
 
 Relationships use Markdown Trace's authored entities and directed, typed links. The default hides context headings; **Context sections** includes them, and **Focus selection** limits the graph to the selected entity and its immediate neighbors. The entity menu also provides keyboard access. The source inspector shows exact excerpts with line ranges and required enclosing context.
 
@@ -23,7 +23,7 @@ Require passing, complete Trace validation and the matching exact task bytes. Ca
 
 ## Open in a host
 
-Build this source checkout and start the service used by your Codex plugin. Ask its model to call `open_project_inspector` with these arguments:
+[Install the beta](install.md) and start the service used by your Codex plugin, or build and run a source checkout. Ask its model to call `open_project_inspector` with these arguments:
 
 ```json
 {
@@ -33,9 +33,9 @@ Build this source checkout and start the service used by your Codex plugin. Ask 
 }
 ```
 
-The tool opens the usual persistent workspace and returns its document ID. Reopen it through `open_graph_dialogue` with `documentId`. In the local browser harness, use `/graphs?document=DOCUMENT_ID`. Restart/reconnect the host after rebuilding to discover the new tool and widget resource.
+The tool opens the usual persistent workspace and returns its document ID. Reopen it through `open_graph_dialogue` with `documentId`. In the local browser harness, use `/graphs?document=DOCUMENT_ID`. After upgrading, restart the service and refresh/reconnect the host to discover the new tool and widget resource.
 
-For a Copilot Canvas built from this checkout, pass the same three paths under `inspector` in `open_canvas`'s input. Use a new Canvas instance for a new import; reopening an existing instance preserves its saved snapshot. Copilot uses the current session for replies. The local browser harness uses the authenticated Codex CLI.
+For the installed Copilot Canvas, pass the same three paths under `inspector` in `open_canvas`'s input. Use a new Canvas instance for a new import; reopening an existing instance preserves its saved snapshot. Copilot uses the current session for replies. The local browser harness uses the authenticated Codex CLI.
 
 After a submission, the host reads the saved document. Its latest submission contains `sourceTarget` (snapshot, view and item IDs) and server-resolved `sourceContext`. The model answers with `respond_to_graph`, or the matching Canvas action, using the existing title/summary/MDX/graphs contract. `graphs: []` supports a prose answer. The answer appears in **Response**; it never replaces the task or history data.
 
