@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { GraphTransport } from './transport.js';
 import type { GraphInput, GraphTarget } from '../../shared/graph/schema.js';
 import type { SourceTarget } from '../../shared/inspector/schema.js';
+import { matchesRequest, prepareRequest } from './request.js';
 export function useGraphDialogue(transport: GraphTransport) {
   const { snapshot, subscribe, connectionError, deliver, refresh } = transport;
   const doc = useSyncExternalStore(subscribe, snapshot);
@@ -14,6 +15,8 @@ export function useGraphDialogue(transport: GraphTransport) {
   const [error, setError] = useState('');
   const [retryInput, setRetryInput] = useState<GraphInput | null>(null);
   const latest = doc?.submissions.at(-1);
+  const draft = { annotation, target: selected, sourceTarget: sourceSelected ?? undefined };
+  const retryCurrent = !!(error && doc && retryInput && matchesRequest(doc, draft, retryInput));
   useEffect(() => {
     const previous = doc?.submissions.at(-1);
     if (previous) {
@@ -60,28 +63,11 @@ export function useGraphDialogue(transport: GraphTransport) {
   }, [doc?.id, latest?.submissionId, waiting]);
   async function send(retry = false) {
     if (!doc || busy || waiting) return;
-    const target =
-      selected &&
-      doc.content?.graphs.some(
-        (g) => g.id === selected.graphId && g.nodes.some((n) => n.id === selected.nodeId),
-      )
-        ? selected
-        : null;
-    const input =
-      retry && retryInput
-        ? retryInput
-        : {
-            documentId: doc.id,
-            revision: doc.revision,
-            submissionId: crypto.randomUUID(),
-            target,
-            annotation,
-            ...(sourceSelected ? { sourceTarget: sourceSelected } : {}),
-          };
     setBusy(true);
     setError('');
-    setRetryInput(input);
     try {
+      const input = await prepareRequest(doc, draft, retryInput, retry, refresh);
+      setRetryInput(input);
       await deliver(input);
       setWaiting(true);
     } catch (e) {
@@ -103,6 +89,7 @@ export function useGraphDialogue(transport: GraphTransport) {
     waiting,
     error,
     canRetry: !!retryInput,
+    retryCurrent,
     send,
   };
 }

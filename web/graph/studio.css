@@ -158,6 +158,14 @@ summary {
   opacity: 0.4;
   cursor: default;
 }
+.graph-retry {
+  padding: 6px;
+  background: transparent;
+  color: var(--graph-muted);
+  border: 1px solid var(--graph-border);
+  border-radius: 6px;
+  font-size: 11px;
+}
 .graph-error,
 .graph-status {
   font-size: 12px;

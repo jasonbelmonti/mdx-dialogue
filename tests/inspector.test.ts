@@ -20,9 +20,27 @@ test('snapshot import retains typed links, exact source context and verified che
     );
     assert.equal(snapshot.history.nodes[1].checkpoint?.contextCommit, '2'.repeat(40));
     assert.equal(snapshot.history.nodes[1].checkpoint?.sourceCommit, '3'.repeat(40));
+    assert.equal(snapshot.history.source, 'fixture-repository');
+    assert.equal(snapshot.history.nodes[1].checkpoint?.runId, 'fixture-run');
     assert.deepEqual(snapshot.history.nodes[1].taskPaths, ['context/task.md']);
     assert.equal(snapshot.history.nodes[1].attribution, undefined);
     assert.equal('blobs' in snapshot.history, false);
+  } finally {
+    f.remove();
+  }
+});
+
+test('a task blob must occur in a captured context tree, not only the source inventory', async () => {
+  const f = inspectorFixture();
+  try {
+    const taskFile = f.history.history.nodes[0].files[0];
+    for (const node of f.history.history.nodes)
+      node.files =
+        node.track === 'source'
+          ? [taskFile]
+          : node.files.filter((file) => file.path !== taskFile.path);
+    f.write();
+    await assert.rejects(importInspector(f.files), /captured history does not retain/);
   } finally {
     f.remove();
   }

@@ -11,9 +11,11 @@ const blob = (text: string) => ({
     .digest('hex'),
   value: { bytes: Buffer.byteLength(text), text, base64: null },
 });
-export function inspectorFixture() {
+export function inspectorFixture(detail = '') {
   const text =
-    '# [TD-SC-1](ctx://trace/entity/TD-SC-1?role=definition)\n\n- [Check](ctx://trace/entity/VAL-1?role=definition) verifies [TD-SC-1](ctx://trace/entity/TD-SC-1?rel=verifies)\n';
+    '# [TD-SC-1](ctx://trace/entity/TD-SC-1?role=definition)\n\n- [Check](ctx://trace/entity/VAL-1?role=definition) verifies [TD-SC-1](ctx://trace/entity/TD-SC-1?rel=verifies)' +
+    (detail ? ` ${detail}` : '') +
+    '\n';
   const range = (start: number, end: number) => {
     const point = (offset: number) => ({
       offset,
@@ -78,7 +80,7 @@ export function inspectorFixture() {
           id: 'O3',
           identifier: 'TD-SC-1',
           role: 'reference',
-          range: range(referenceStart, text.length - 1),
+          range: range(referenceStart, text.indexOf(')', referenceStart) + 1),
           fragmentId: 'F2',
         },
       ],
@@ -133,7 +135,7 @@ export function inspectorFixture() {
     },
     history: {
       version: 1,
-      source: 'fixture-run',
+      source: 'fixture-repository',
       capturedAt: '2026-10-16T12:00:00.000Z',
       warnings: [],
       nodes: [

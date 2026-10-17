@@ -1,6 +1,6 @@
 # Task relationships and Capsule history
 
-This source-build feature adds **Relationships**, **History**, and **Response** views above the same bottom composer. Select an entity or history event, ask a question, then open **Response** when the revision advances. Switching views keeps the draft and clears the selection so the next question cannot silently target the previous view. A saved retry uses the original question and selection.
+This source-build feature adds **Relationships**, **History**, and **Response** views above the same bottom composer. Select an entity or history event, ask a question, then open **Response** when the revision advances. Switching views keeps the draft and clears the selection so the next question cannot silently target the previous view. After an error, editing the question or selection lets you submit the corrected request. **Retry saved request** remains available for the original question and selection; a new request waits until the server confirms that no response is pending.
 
 Relationships use Markdown Trace's authored entities and directed, typed links. The default hides context headings; **Context sections** includes them, and **Focus selection** limits the graph to the selected entity and its immediate neighbors. The entity menu also provides keyboard access. The source inspector shows exact excerpts with line ranges and required enclosing context.
 

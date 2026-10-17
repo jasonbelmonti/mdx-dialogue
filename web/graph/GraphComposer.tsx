@@ -11,7 +11,7 @@ export function GraphComposer({
   showGraphTargets: boolean;
   requireSourceTarget: boolean;
 }) {
-  const { doc, selected, annotation, busy, waiting, error } = state;
+  const { doc, selected, annotation, busy, waiting, error, retryCurrent } = state;
   if (!doc) return null;
   const content = doc.content;
   const latest = doc.submissions.at(-1);
@@ -109,22 +109,32 @@ export function GraphComposer({
             </pre>
           </details>
         )}
+        {error && state.canRetry && !retryCurrent && (
+          <button
+            className="graph-retry"
+            type="button"
+            disabled={busy || waiting}
+            onClick={() => void state.send(true)}
+          >
+            Retry saved request
+          </button>
+        )}
         <button
           className="graph-submit"
           type="button"
           disabled={
             busy ||
             waiting ||
-            (!(error && state.canRetry) &&
+            (!retryCurrent &&
               (!annotation.trim() || (requireSourceTarget && !state.sourceSelected)))
           }
-          onClick={() => void state.send(!!error && state.canRetry)}
+          onClick={() => void state.send(retryCurrent)}
         >
           {busy
             ? 'Sending…'
             : waiting
               ? 'The model is composing…'
-              : error && state.canRetry
+              : retryCurrent
                 ? 'Retry saved request'
                 : doc.inspector
                   ? 'Ask about selection'

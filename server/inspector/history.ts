@@ -115,9 +115,10 @@ export function importHistory(raw: unknown, exportSha256: string, task: TaskSnap
     }
     return { ...node, taskPaths, ...(checkpoint ? { checkpoint } : {}) };
   });
-  if (!nodes.some((n) => n.lane === history.source && n.taskPaths.length))
+  // `source` is a directory display name; run identities live on the captured nodes.
+  if (!nodes.some((n) => n.taskPaths.length))
     throw new Error(
-      'The selected run does not retain the exact task bytes. Export the matching task run with --run.',
+      'The captured history does not retain the exact task bytes. Export the matching task run with --run.',
     );
   return historySnapshotSchema.parse({ ...history, producer, exportSha256, nodes });
 }
